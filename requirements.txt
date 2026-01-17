@@ -1,0 +1,27 @@
+# Core
+streamlit>=1.30.0
+
+# AI/ML Libraries
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.35.0
+openai>=1.0.0
+anthropic>=0.7.0
+
+# Image Processing
+pillow>=10.0.0
+opencv-python>=4.8.0
+
+# HTTP & API
+requests>=2.31.0
+httpx>=0.25.0
+
+# Data Science
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Optional: Stability AI
+stability-sdk>=0.8.0
+
+# Optional: For advanced features
+python-dotenv>=1.0.0
