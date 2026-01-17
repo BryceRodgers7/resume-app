@@ -1,10 +1,9 @@
 import streamlit as st
 
-st.title("💬 Agentic Customer Support Chatbot")
+st.title("🧍🏻‍♂️ About Me")
 
 st.markdown("""
-This is an intelligent customer support chatbot that uses agentic workflows to handle
-customer inquiries effectively.
+This is a page where you'll learn all about me, Bryce Rodgers!
 
 ---
 """)
