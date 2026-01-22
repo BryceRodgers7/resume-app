@@ -41,14 +41,45 @@ The app will open in your browser at `http://localhost:8501`
 
 ## 🔧 Development
 
+### Training the Image Classifier
+
+The image classifier can identify **birds**, **planes**, **Superman**, and **other** objects!
+
+To train your custom model:
+
+1. **Create dataset structure:**
+   ```bash
+   cd model_tuning
+   python download_sample_data.py
+   ```
+
+2. **Add training images** to `model_tuning/dataset/train/<category>/`
+   - Add validation images to `model_tuning/dataset/val/<category>/`
+   - Recommended: 50-100+ images per category for training
+   - Recommended: 10-20+ images per category for validation
+
+3. **Train the model:**
+   ```bash
+   python train_classifier.py
+   ```
+
+4. **Test the model:**
+   ```bash
+   python test_model.py
+   ```
+
+5. **Use in the app** - The model will be automatically loaded by the Image Classifier page!
+
+See `model_tuning/README.md` for detailed instructions.
+
 ### Adding Your Existing Code
 
 Each demo page is located in the `pages/` directory:
 - `pages/customer_support.py` - Customer support chatbot
 - `pages/gpt_model.py` - GPT model demo
-- `pages/text_to_image.py` - Text-to-image generator
-- `pages/image_classifier.py` - Image classifier
-- `pages/simple_chatbot.py` - Simple chatbot
+- `pages/stability.py` - Text-to-image generator
+- `pages/image_classifier.py` - Image classifier (now fully functional!)
+- `pages/pirate_chatbot.py` - Pirate-themed chatbot
 
 Simply replace the placeholder code in each file with your existing implementations.
 
@@ -59,16 +90,23 @@ resume-app/
 ├── app.py                  # Main application with navigation
 ├── pages/                  # Individual page modules
 │   ├── __init__.py
-│   ├── home.py
+│   ├── about_me.py
 │   ├── customer_support.py
 │   ├── gpt_model.py
-│   ├── text_to_image.py
+│   ├── stability.py
 │   ├── image_classifier.py
-│   └── simple_chatbot.py
-├── requirements.txt        # Python dependencies
-├── .streamlit/            # Streamlit configuration (create if needed)
-│   └── secrets.toml       # API keys and secrets
-└── README.md              # This file
+│   └── pirate_chatbot.py
+├── model_tuning/          # Model training scripts
+│   ├── train_classifier.py
+│   ├── download_sample_data.py
+│   ├── test_model.py
+│   ├── README.md
+│   └── dataset/          # Training data goes here
+├── models/                # Trained models
+├── requirements.txt       # Python dependencies
+├── .streamlit/           # Streamlit configuration (create if needed)
+│   └── secrets.toml      # API keys and secrets
+└── README.md             # This file
 ```
 
 ## 🌐 Deployment
