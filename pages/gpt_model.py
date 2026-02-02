@@ -108,25 +108,40 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                 if response.status_code == 200:
                     result = response.json()
                     
-                    if result.get("success"):
+                    # Check if response contains the expected "text" field
+                    if "text" in result:
                         st.success("✅ Generation complete!")
                         
                         # Display generated text
                         st.markdown("### 📝 Generated Text")
                         st.text_area(
                             "Output",
-                            value=result["generated_text"],
+                            value=result["text"],
                             height=300,
                             disabled=True,
                             label_visibility="collapsed"
                         )
                         
-                        # Display parameters used
+                        # Display generation details
                         with st.expander("ℹ️ Generation Details"):
-                            params = result.get("parameters", {})
-                            st.json(params)
+                            details = {}
+                            if "generation_time" in result:
+                                details["Generation Time (seconds)"] = result["generation_time"]
+                            if "tokens" in result:
+                                details["Number of Tokens"] = len(result["tokens"])
+                                details["Tokens"] = result["tokens"]
+                            details["Request Parameters"] = payload
+                            st.json(details)
                     else:
-                        st.error(f"Generation failed: {result.get('error', 'Unknown error')}")
+                        st.error(f"❌ Generation failed: {result.get('error', 'Unknown error')}")
+                        
+                        # Display full response for debugging
+                        with st.expander("🔍 Full Response Details"):
+                            st.json(result)
+                        
+                        # Display request parameters that were sent
+                        with st.expander("📤 Request Parameters Sent"):
+                            st.json(payload)
                 elif response.status_code == 422:
                     # Validation error
                     try:
