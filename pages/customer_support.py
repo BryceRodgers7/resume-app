@@ -1,25 +1,12 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import os
-from datetime import datetime
 from app import logger
 from chatbot.agent import CustomerSupportAgent
 from chatbot.prompts import WELCOME_MESSAGE
 from tools.schemas import get_tool_descriptions
 
-st.title("💬 Agentic Customer Support Chatbot")
-
-st.markdown("""
-This is an intelligent customer support chatbot that uses agentic workflows to handle
-customer inquiries effectively.
-
----
-""")
-"""Streamlit main chat interface for customer support chatbot."""
-
-
-
-# Page configuration
+# Page configuration - MUST be first Streamlit command
 st.set_page_config(
     page_title="Customer Support Chatbot",
     page_icon="🤖",
@@ -50,10 +37,6 @@ st.markdown("""
         border-radius: 3px;
         font-size: 0.85em;
     }
-    /* Hide page navigation */
-    [data-testid="stSidebarNav"] {
-        display: none;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -79,37 +62,6 @@ def initialize_session_state():
 def render_sidebar():
     """Render the sidebar with tool information and usage tracking."""
     with st.sidebar:
-        st.title("🔧 Available Tools")
-        
-        # Button to open all data views in a new browser tab
-        components.html("""
-            <button onclick="window.open('/All_Data_Views', '_blank')" style="
-                width: 100%;
-                padding: 0.5rem 1rem;
-                background-color: #FF4B4B;
-                color: white;
-                border: none;
-                border-radius: 0.5rem;
-                cursor: pointer;
-                font-size: 1rem;
-                font-weight: 500;
-            ">
-                📊 View All Data Tables (New Tab)
-            </button>
-        """, height=50)
-        
-        st.divider()
-        
-        # Get tool descriptions
-        tool_descriptions = get_tool_descriptions()
-        
-        st.markdown("### Tool Reference")
-        for tool_name, description in tool_descriptions.items():
-            with st.expander(f"📌 {tool_name}"):
-                st.write(description)
-        
-        st.divider()
-        
         # Tool usage statistics
         st.markdown("### 📊 Tool Usage (This Session)")
         if st.session_state.tool_usage:
@@ -132,6 +84,18 @@ def render_sidebar():
             st.session_state.tool_usage = []
             st.session_state.show_welcome = True
             st.rerun()
+        
+        st.divider()
+        
+        # Available Tools section at the bottom
+        st.markdown("### 🔧 Available Tools")
+        
+        # Get tool descriptions
+        tool_descriptions = get_tool_descriptions()
+        
+        for tool_name, description in tool_descriptions.items():
+            with st.expander(f"📌 {tool_name}"):
+                st.write(description)
 
 
 def render_tool_calls(tool_calls):
@@ -181,8 +145,16 @@ def main():
     initialize_session_state()
     
     # Header
-    st.title("🤖 Customer Support Chatbot")
-    st.caption("Powered by OpenAI GPT-4 with function calling")
+    st.title("💬 Agentic Customer Support Chatbot")
+    st.markdown("""
+    This is an intelligent customer support chatbot for a fictional e-commerce store called Protis, that 
+    uses agentic workflows to handle customer inquiries effectively. It is driven by a knowledge base of 
+    procedures and instructions stored in a Qdrant vector database, and has access to a variety of 
+    pre-programmed tools, as well as a product & orders database. You can view all the data yourself by clicking the 
+    "View All Data Tables" button below.
+    An architecture diagram of the agent is available [here](https://github.com/BryceRodgers7/AI-Portfolio/blob/main/docs/agent_architecture.png).
+    """)
+    st.caption("Powered by OpenAI GPT-4 with function calling and the Protis knowledge base")
     
     # Sidebar
     render_sidebar()
@@ -194,12 +166,26 @@ def main():
         st.markdown("### Chat")
     
     with col2:
-        # API key status
-        api_key_configured = bool(os.getenv("OPENAI_API_KEY"))
-        if api_key_configured:
-            st.success("✅ API Key Configured")
-        else:
-            st.error("❌ API Key Missing")
+        # Button to open all data views in a new browser tab
+        components.html("""
+            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                <button onclick="window.open('/All_Data_Views', '_blank')" style="
+                    padding: 0.5rem 1rem;
+                    background-color: #FF4B4B;
+                    color: white;
+                    border: none;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                ">
+                    📊 View All Data Tables
+                </button>
+            </div>
+        """, height=50)
+    
+    # Check API key for later use
+    api_key_configured = bool(os.getenv("OPENAI_API_KEY"))
     
     # Display welcome message
     if st.session_state.show_welcome:

@@ -114,8 +114,8 @@ class DatabaseManager:
                         params.append(category)
                     
                     if search_query:
-                        query += " AND (name ILIKE %s OR description ILIKE %s)"
-                        params.extend([f"%{search_query}%", f"%{search_query}%"])
+                        query += " AND (name ILIKE %s OR description ILIKE %s OR specifications ILIKE %s)"
+                        params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
                     
                     query += " ORDER BY name"
                     

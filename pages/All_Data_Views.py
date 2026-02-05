@@ -1,6 +1,8 @@
 """Streamlit page showing all data views in tabs."""
 import streamlit as st
 import pandas as pd
+import json
+from pathlib import Path
 from database.db_manager import DatabaseManager
 
 st.set_page_config(
@@ -11,16 +13,16 @@ st.set_page_config(
 )
 
 # Hide sidebar and page navigation
-# st.markdown("""
-# <style>
-#     [data-testid="stSidebar"] {
-#         display: none;
-#     }
-#     [data-testid="stSidebarNav"] {
-#         display: none;
-#     }
-# </style>
-# """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("📊 All Data Views")
 st.caption("View all database tables in one place")
@@ -33,12 +35,13 @@ def get_db():
 db = get_db()
 
 # Create tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🛍️ Products", 
     "📦 Orders", 
     "🚚 Shipping Rates", 
     "🎫 Support Tickets", 
-    "↩️ Returns"
+    "↩️ Returns",
+    "📚 Knowledge Base Chunks"
 ])
 
 # Tab 1: Products
@@ -452,8 +455,145 @@ with tab5:
                                 product_name = item.get('product_name', f"Product {item['product_id']}")
                                 refund_amount = item['price_at_purchase'] * item['quantity']
                                 st.write(f"• **{product_name}** - Quantity: {item['quantity']}, Refund: ${refund_amount:.2f}")
-        else:[[
-            st.info("No returns found")]]
+        else:
+            st.info("No returns found")
             
     except Exception as e:
         st.error(f"Error loading returns: {str(e)}")
+
+# Tab 6: Knowledge Base Chunks
+with tab6:
+    st.subheader("Knowledge Base Chunks")
+    
+    try:
+        # Load chunks.json
+        chunks_path = Path(__file__).parent.parent / 'qdrant' / 'chunks.json'
+        
+        if not chunks_path.exists():
+            st.error("chunks.json file not found in qdrant/ directory")
+        else:
+            with open(chunks_path, 'r', encoding='utf-8') as f:
+                chunks_data = json.load(f)
+            
+            chunks = chunks_data.get('chunks', [])
+            
+            if chunks:
+                # Filters
+                col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+                
+                with col1:
+                    # Get unique audiences
+                    audiences = sorted(list(set(chunk.get('audience', '') for chunk in chunks if chunk.get('audience'))))
+                    audience_filter = st.selectbox(
+                        "Filter by Audience",
+                        ["All Audiences"] + audiences,
+                        key="chunks_audience"
+                    )
+                
+                with col2:
+                    # Get unique doc types
+                    doc_types = sorted(list(set(chunk.get('doc_type', '') for chunk in chunks if chunk.get('doc_type'))))
+                    doc_type_filter = st.selectbox(
+                        "Filter by Doc Type",
+                        ["All Types"] + doc_types,
+                        key="chunks_doctype"
+                    )
+                
+                with col3:
+                    # Search
+                    search_query = st.text_input("Search Content", "", key="chunks_search")
+                
+                with col4:
+                    if st.button("🔄 Refresh", use_container_width=True, key="chunks_refresh"):
+                        st.rerun()
+                
+                # Apply filters
+                filtered_chunks = chunks
+                
+                if audience_filter != "All Audiences":
+                    filtered_chunks = [c for c in filtered_chunks if c.get('audience') == audience_filter]
+                
+                if doc_type_filter != "All Types":
+                    filtered_chunks = [c for c in filtered_chunks if c.get('doc_type') == doc_type_filter]
+                
+                if search_query:
+                    search_lower = search_query.lower()
+                    filtered_chunks = [
+                        c for c in filtered_chunks 
+                        if search_lower in c.get('title', '').lower() 
+                        or search_lower in c.get('content', '').lower()
+                        or search_lower in c.get('id', '').lower()
+                    ]
+                
+                st.success(f"Found {len(filtered_chunks)} chunk(s)")
+                
+                # Convert to DataFrame
+                df = pd.DataFrame(filtered_chunks)
+                
+                # Sort by audience (agent first) and then by doc_type (tool_contract, sop first)
+                if 'audience' in df.columns and 'doc_type' in df.columns:
+                    # Create custom sort order for audience (agent first, then others alphabetically)
+                    audience_order = {'agent': 0, 'customer': 1}
+                    df['audience_sort'] = df['audience'].map(lambda x: audience_order.get(x, 2))
+                    
+                    # Create custom sort order for doc_type (tool_contract and sop first)
+                    doc_type_order = {'tool_contract': 0, 'sop': 1}
+                    df['doc_type_sort'] = df['doc_type'].map(lambda x: doc_type_order.get(x, 2))
+                    
+                    # Sort by custom sort columns, then by the original columns as tiebreakers
+                    df = df.sort_values(
+                        by=['audience_sort', 'audience', 'doc_type_sort', 'doc_type'],
+                        ascending=[True, True, True, True]
+                    )
+                    
+                    # Drop the temporary sort columns
+                    df = df.drop(['audience_sort', 'doc_type_sort'], axis=1)
+                
+                # Display statistics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Chunks", len(filtered_chunks))
+                with col2:
+                    audiences_count = df['audience'].nunique() if 'audience' in df.columns else 0
+                    st.metric("Audiences", audiences_count)
+                with col3:
+                    doc_types_count = df['doc_type'].nunique() if 'doc_type' in df.columns else 0
+                    st.metric("Doc Types", doc_types_count)
+                with col4:
+                    categories_count = df['category'].nunique() if 'category' in df.columns else 0
+                    st.metric("Categories", categories_count)
+                
+                st.divider()
+                
+                # Create display columns with full content
+                display_df = df.copy()
+                if 'content' in display_df.columns:
+                    # Keep full content, just rename column
+                    display_df['content_preview'] = display_df['content']
+                    display_df = display_df.drop('content', axis=1)
+                
+                # Convert tags list to string
+                if 'tags' in display_df.columns:
+                    display_df['tags'] = display_df['tags'].apply(lambda x: ', '.join(x) if isinstance(x, list) else str(x))
+                
+                # Display chunks table
+                st.dataframe(
+                    display_df,
+                    height=400,
+                    hide_index=True,
+                    column_config={
+                        "id": st.column_config.TextColumn("ID", width=120),
+                        "title": st.column_config.TextColumn("Title", width=200),
+                        "audience": st.column_config.TextColumn("Audience", width=35),
+                        "doc_type": st.column_config.TextColumn("Doc Type", width=60),
+                        "category": st.column_config.TextColumn("Category", width=40),
+                        "product_id": st.column_config.NumberColumn("Product ID", width=35, format="%d"),
+                        "tags": st.column_config.TextColumn("Tags", width=150),
+                        "content_preview": st.column_config.TextColumn("Content Preview", width=800)
+                    }
+                )
+            else:
+                st.info("No chunks found in chunks.json")
+                
+    except Exception as e:
+        st.error(f"Error loading chunks: {str(e)}")
