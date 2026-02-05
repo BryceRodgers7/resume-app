@@ -5,25 +5,6 @@ import json
 from pathlib import Path
 from database.db_manager import DatabaseManager
 
-st.set_page_config(
-    page_title="All Data Views",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Hide sidebar and page navigation
-st.markdown("""
-<style>
-    [data-testid="stSidebar"] {
-        display: none;
-    }
-    [data-testid="stSidebarNav"] {
-        display: none;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 st.title("📊 All Data Views")
 st.caption("View all database tables in one place")
 

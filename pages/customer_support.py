@@ -1,18 +1,38 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import os
-from app import logger
+import sys
+import logging
+from pathlib import Path
 from chatbot.agent import CustomerSupportAgent
 from chatbot.prompts import WELCOME_MESSAGE
 from tools.schemas import get_tool_descriptions
 
-# Page configuration - MUST be first Streamlit command
-st.set_page_config(
-    page_title="Customer Support Chatbot",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Configure logging (don't import from app.py to avoid rendering homepage)
+logger = logging.getLogger(__name__)
+
+# Check if we should show the data views instead
+show_data_views = st.query_params.get("view") == "data"
+
+# If showing data views, load and execute that module instead
+if show_data_views:
+    # Hide sidebar and page navigation
+    st.markdown("""
+    <style>
+        [data-testid="stSidebar"] {
+            display: none;
+        }
+        [data-testid="stSidebarNav"] {
+            display: none;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Execute the data views script
+    views_path = Path(__file__).parent.parent / 'views' / 'All_Data_Views.py'
+    with open(views_path, 'r', encoding='utf-8') as f:
+        exec(f.read())
+    st.stop()
 
 # Custom CSS
 st.markdown("""
@@ -74,8 +94,6 @@ def render_sidebar():
                 st.metric(tool_name, count)
         else:
             st.info("No tools used yet")
-        
-        st.divider()
         
         # Clear conversation button
         if st.button("🗑️ Clear Conversation", use_container_width=True):
@@ -140,127 +158,122 @@ def render_tool_calls(tool_calls):
                 st.divider()
 
 
-def main():
-    """Main application logic."""
-    initialize_session_state()
-    
-    # Header
-    st.title("💬 Agentic Customer Support Chatbot")
-    st.markdown("""
-    This is an intelligent customer support chatbot for a fictional e-commerce store called Protis, that 
-    uses agentic workflows to handle customer inquiries effectively. It is driven by a knowledge base of 
-    procedures and instructions stored in a Qdrant vector database, and has access to a variety of 
-    pre-programmed tools, as well as a product & orders database. You can view all the data yourself by clicking the 
-    "View All Data Tables" button below.
-    An architecture diagram of the agent is available [here](https://github.com/BryceRodgers7/AI-Portfolio/blob/main/docs/agent_architecture.png).
-    """)
-    st.caption("Powered by OpenAI GPT-4 with function calling and the Protis knowledge base")
-    
-    # Sidebar
-    render_sidebar()
-    
-    # Main content area
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        st.markdown("### Chat")
-    
-    with col2:
-        # Button to open all data views in a new browser tab
-        components.html("""
-            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                <button onclick="window.open('/All_Data_Views', '_blank')" style="
-                    padding: 0.5rem 1rem;
-                    background-color: #FF4B4B;
-                    color: white;
-                    border: none;
-                    border-radius: 0.5rem;
-                    cursor: pointer;
-                    font-size: 0.9rem;
-                    font-weight: 500;
-                ">
-                    📊 View All Data Tables
-                </button>
-            </div>
-        """, height=50)
-    
-    # Check API key for later use
-    api_key_configured = bool(os.getenv("OPENAI_API_KEY"))
-    
-    # Display welcome message
-    if st.session_state.show_welcome:
-        with st.chat_message("assistant"):
-            st.markdown(WELCOME_MESSAGE)
-        st.session_state.show_welcome = False
-    
-    # Display chat messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            
-            # Show tool calls if present
-            if "tool_calls" in message and message["tool_calls"]:
-                render_tool_calls(message["tool_calls"])
-    
-    # Chat input
-    if prompt := st.chat_input("How can I help you today?"):
-        # Check API key
-        if not api_key_configured:
-            st.error("⚠️ Please configure OPENAI_API_KEY environment variable to use the chatbot.")
-            return
-        
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.conversation_history.append({"role": "user", "content": prompt})
-        
-        # Get agent response
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response, tool_calls = st.session_state.agent.chat(
-                    prompt,
-                    st.session_state.conversation_history
-                )
-            
-            # Log response summary
-            logger.info(f"\n{'='*80}")
-            logger.info(f"USER QUERY: {prompt}")
-            logger.info(f"TOOLS USED: {len(tool_calls)}")
-            if tool_calls:
-                for idx, tool_call in enumerate(tool_calls, 1):
-                    logger.info(f"  {idx}. {tool_call['tool']}")
-            logger.info(f"{'='*80}\n")
-            
-            # Display response
-            st.markdown(response)
-            
-            # Display tool calls
-            if tool_calls:
-                logger.info(f"Rendering {len(tool_calls)} tool call(s) in UI")
-                render_tool_calls(tool_calls)
-                
-                # Update tool usage tracking
-                st.session_state.tool_usage.extend(tool_calls)
-                logger.info(f"Total tools used in session: {len(st.session_state.tool_usage)}")
-        
-        # Add assistant message to chat history
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response,
-            "tool_calls": tool_calls
-        })
-        st.session_state.conversation_history.append({
-            "role": "assistant",
-            "content": response
-        })
-        
-        # Rerun to update the UI
-        st.rerun()
+# Initialize session state
+initialize_session_state()
 
+# Header
+st.title("💬 Agentic Customer Support Chatbot")
+st.markdown("""
+This is an intelligent customer support chatbot for a fictional e-commerce store called Protis, that 
+uses agentic workflows to handle customer inquiries effectively. It is driven by a knowledge base of 
+procedures and instructions stored in a Qdrant vector database, and has access to a variety of 
+pre-programmed tools, as well as a product & orders database. You can view all the data yourself by clicking the 
+"View All Data Tables" button below.
+An architecture diagram of the agent is available [here](https://github.com/BryceRodgers7/AI-Portfolio/blob/main/docs/agent_architecture.png).
+""")
+st.caption("Powered by OpenAI GPT-4 with function calling and the Protis knowledge base")
 
-if __name__ == "__main__":
-    main()
+# Sidebar
+render_sidebar()
+
+# Main content area
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.markdown("### Chat")
+
+with col2:
+    # Button to open all data views in a new browser tab
+    components.html("""
+        <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+            <button onclick="window.open('/customer_support?view=data', '_blank')" style="
+                padding: 0.5rem 1rem;
+                background-color: #FF4B4B;
+                color: white;
+                border: none;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                font-size: 0.9rem;
+                font-weight: 500;
+            ">
+                📊 View All Data Tables
+            </button>
+        </div>
+    """, height=50)
+
+# Check API key for later use
+api_key_configured = bool(os.getenv("OPENAI_API_KEY"))
+
+# Display welcome message
+if st.session_state.show_welcome:
+    with st.chat_message("assistant"):
+        st.markdown(WELCOME_MESSAGE)
+    st.session_state.show_welcome = False
+
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+        
+        # Show tool calls if present
+        if "tool_calls" in message and message["tool_calls"]:
+            render_tool_calls(message["tool_calls"])
+
+# Chat input
+if prompt := st.chat_input("How can I help you today?"):
+    # Check API key
+    if not api_key_configured:
+        st.error("⚠️ Please configure OPENAI_API_KEY environment variable to use the chatbot.")
+        st.stop()
+    
+    # Display user message
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.conversation_history.append({"role": "user", "content": prompt})
+    
+    # Get agent response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response, tool_calls = st.session_state.agent.chat(
+                prompt,
+                st.session_state.conversation_history
+            )
+        
+        # Log response summary
+        logger.info(f"\n{'='*80}")
+        logger.info(f"USER QUERY: {prompt}")
+        logger.info(f"TOOLS USED: {len(tool_calls)}")
+        if tool_calls:
+            for idx, tool_call in enumerate(tool_calls, 1):
+                logger.info(f"  {idx}. {tool_call['tool']}")
+        logger.info(f"{'='*80}\n")
+        
+        # Display response
+        st.markdown(response)
+        
+        # Display tool calls
+        if tool_calls:
+            logger.info(f"Rendering {len(tool_calls)} tool call(s) in UI")
+            render_tool_calls(tool_calls)
+            
+            # Update tool usage tracking
+            st.session_state.tool_usage.extend(tool_calls)
+            logger.info(f"Total tools used in session: {len(st.session_state.tool_usage)}")
+    
+    # Add assistant message to chat history
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": response,
+        "tool_calls": tool_calls
+    })
+    st.session_state.conversation_history.append({
+        "role": "assistant",
+        "content": response
+    })
+    
+    # Rerun to update the UI
+    st.rerun()
 
