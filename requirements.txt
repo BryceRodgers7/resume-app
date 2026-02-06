@@ -15,6 +15,7 @@ opencv-python>=4.8.0
 # HTTP & API
 requests>=2.31.0
 httpx>=0.25.0
+ddgs==9.10.0
 
 # Data Science
 numpy>=1.24.0

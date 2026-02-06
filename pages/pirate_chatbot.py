@@ -2,6 +2,14 @@ import streamlit as st
 import os
 from openai import OpenAI
 
+# Page configuration
+st.set_page_config(
+    page_title="Pirate Chatbot",
+    page_icon="🏴‍☠️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 st.title("🏴‍☠️ Pirate Chatbot")
 st.write("Chat with an AI assistant - customize the system prompt to change its behavior!")
 

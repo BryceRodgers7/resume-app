@@ -8,6 +8,14 @@ import time
 import getpass
 from random import randrange
 
+# Page configuration
+st.set_page_config(
+    page_title="Text-to-Image Generator",
+    page_icon="🎨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # current_content = io.BytesIO()
 
 st.title("Prompted Pictures")

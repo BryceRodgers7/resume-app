@@ -7,6 +7,14 @@ import json
 from pathlib import Path
 import numpy as np
 
+# Page configuration
+st.set_page_config(
+    page_title="Image Classifier",
+    page_icon="🖼️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 st.title("🖼️ Is It a Bird? Is It a Plane? 🦸")
 
 st.markdown("""

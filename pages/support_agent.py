@@ -8,6 +8,14 @@ from chatbot.agent import CustomerSupportAgent
 from chatbot.prompts import WELCOME_MESSAGE
 from tools.schemas import get_tool_descriptions
 
+# Page configuration
+st.set_page_config(
+    page_title="Customer Support Agent",
+    page_icon="💬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Configure logging (don't import from app.py to avoid rendering homepage)
 logger = logging.getLogger(__name__)
 

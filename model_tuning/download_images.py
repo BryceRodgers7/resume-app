@@ -33,6 +33,9 @@ from PIL import Image
 import io
 import os
 import sys
+import shutil
+import random
+from ddgs import DDGS
 
 class ImageDownloader:
     def __init__(self, output_dir):
@@ -101,73 +104,27 @@ class ImageDownloader:
     def search_duckduckgo(self, query, max_images=100):
         """
         Search DuckDuckGo for images (no API key needed!)
-        Uses DuckDuckGo's public image search API
+        Uses the ddgs library
         """
         print(f"\n🔍 Searching DuckDuckGo for '{query}'...")
         
         all_urls = []
         
         try:
-            # DuckDuckGo image search endpoint
-            url = "https://duckduckgo.com/"
-            params = {"q": query, "t": "h_", "iax": "images", "ia": "images"}
+            # Use DDGS library for reliable image search
+            ddgs = DDGS()
+            results = ddgs.images(
+                query=query,
+                max_results=max_images
+            )
             
-            # Get the search page
-            response = self.session.get(url, params=params)
+            for result in results:
+                if 'image' in result:
+                    all_urls.append(result['image'])
+                elif 'url' in result:
+                    all_urls.append(result['url'])
             
-            # Get vqd token (required for image search)
-            import re
-            vqd_match = re.search(r'vqd=([\d-]+)', response.text)
-            if not vqd_match:
-                print("  ⚠️  Could not extract search token")
-                return []
-            
-            vqd = vqd_match.group(1)
-            
-            # Search for images
-            search_url = "https://duckduckgo.com/i.js"
-            headers = {
-                "authority": "duckduckgo.com",
-                "accept": "application/json, text/javascript, */*; q=0.01",
-                "referer": "https://duckduckgo.com/",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-            
-            offset = 0
-            while len(all_urls) < max_images:
-                params = {
-                    "l": "us-en",
-                    "o": "json",
-                    "q": query,
-                    "vqd": vqd,
-                    "f": ",,,",
-                    "p": "1",
-                    "v7exp": "a",
-                    "s": offset
-                }
-                
-                response = self.session.get(search_url, params=params, headers=headers, timeout=10)
-                data = response.json()
-                
-                results = data.get("results", [])
-                if not results:
-                    break
-                
-                for result in results:
-                    if "image" in result:
-                        all_urls.append(result["image"])
-                
-                print(f"  Found {len(results)} images (total: {len(all_urls)})")
-                
-                # Check if more results available
-                if not data.get("next"):
-                    break
-                
-                offset += len(results)
-                time.sleep(1)  # Be nice to DuckDuckGo
-                
-                if len(all_urls) >= max_images:
-                    break
+            print(f"  Found {len(all_urls)} images for '{query}'")
                     
         except Exception as e:
             print(f"  ⚠️  Search error: {str(e)}")
@@ -291,58 +248,85 @@ def download_category_images(category, queries, method='duckduckgo', api_key=Non
     print(f"📥 Downloading {category.upper()} images")
     print(f"{'='*70}")
     
-    for split, max_images in [('train', train_count), ('val', val_count)]:
-        print(f"\n🎯 Collecting {max_images} images for {split} set...")
-        
-        output_dir = base_dir / split / category
-        downloader = ImageDownloader(output_dir)
-        
-        # Collect URLs from all queries
-        all_urls = []
-        images_per_query = max_images // len(queries) + 1
-        
-        for query in queries:
-            if method == 'bing':
-                urls = downloader.search_bing(query, images_per_query, api_key)
-            elif method == 'duckduckgo':
-                urls = downloader.search_duckduckgo(query, images_per_query)
-            elif method == 'unsplash':
-                urls = downloader.search_unsplash(query, images_per_query, api_key)
-            else:
-                print(f"❌ Unknown method: {method}")
-                return 0
-            
-            all_urls.extend(urls)
-            
-            if len(all_urls) >= max_images:
-                break
-        
-        # Download images
-        print(f"\n💾 Downloading {min(len(all_urls), max_images)} images...")
-        downloaded = 0
-        
-        for i, url in enumerate(all_urls[:max_images], 1):
-            filename = output_dir / f"{category}_{split}_{i:04d}.jpg"
-            
-            # Skip if exists
-            if filename.exists():
-                print(f"  [{i}/{max_images}] ⏭️  Already exists: {filename.name}")
-                downloaded += 1
-                continue
-            
-            print(f"  [{i}/{max_images}] Downloading...", end=' ')
-            if downloader.download_image(url, filename):
-                downloaded += 1
-                print(f"✓ {filename.name}")
-            else:
-                print(f"✗ Failed")
-            
-            # Rate limiting
-            time.sleep(0.5)
-        
-        print(f"\n✅ Downloaded {downloaded}/{max_images} {split} images for {category}")
+    total_images_needed = train_count + val_count
     
-    return downloaded
+    # Create temporary download directory
+    temp_dir = base_dir / 'temp' / category
+    downloader = ImageDownloader(temp_dir)
+    
+    # Step 1: Collect URLs from all queries (search once per query)
+    print(f"\n🔍 Searching for {total_images_needed} images total...")
+    all_urls = []
+    images_per_query = total_images_needed // len(queries) + 10  # Get a few extra
+    
+    for query in queries:
+        if method == 'duckduckgo':
+            urls = downloader.search_duckduckgo(query, images_per_query)
+        # elif method == 'bing':
+        #     urls = downloader.search_bing(query, images_per_query, api_key)
+        # elif method == 'unsplash':
+        #     urls = downloader.search_unsplash(query, images_per_query, api_key)
+        else:
+            print(f"❌ Unknown method: {method}")
+            return 0
+        
+        all_urls.extend(urls)
+        
+        if len(all_urls) >= total_images_needed:
+            break
+    
+    # Step 2: Download all images to temporary directory
+    print(f"\n💾 Downloading {min(len(all_urls), total_images_needed)} images...")
+    downloaded_files = []
+    
+    for i, url in enumerate(all_urls[:total_images_needed], 1):
+        filename = temp_dir / f"{category}_{i:04d}.jpg"
+        
+        print(f"  [{i}/{min(len(all_urls), total_images_needed)}] Downloading...", end=' ')
+        if downloader.download_image(url, filename):
+            downloaded_files.append(filename)
+            print(f"✓ {filename.name}")
+        else:
+            print(f"✗ Failed")
+        
+        # Rate limiting
+        time.sleep(0.5)
+    
+    print(f"\n✅ Downloaded {len(downloaded_files)} total images for {category}")
+    
+    # Step 3: Split downloaded images into train and val sets
+    print(f"\n📊 Splitting images into train ({train_count}) and val ({val_count}) sets...")
+    
+    train_dir = base_dir / 'train' / category
+    val_dir = base_dir / 'val' / category
+    train_dir.mkdir(parents=True, exist_ok=True)
+    val_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Randomize order before splitting to avoid ordering bias
+    random.shuffle(downloaded_files)
+    
+    # Split: first train_count images to train, rest to val
+    train_files = downloaded_files[:train_count]
+    val_files = downloaded_files[train_count:train_count + val_count]
+    
+    # Move train files
+    for i, src_file in enumerate(train_files, 1):
+        dest_file = train_dir / f"{category}_train_{i:04d}.jpg"
+        shutil.move(str(src_file), str(dest_file))
+    
+    # Move val files
+    for i, src_file in enumerate(val_files, 1):
+        dest_file = val_dir / f"{category}_val_{i:04d}.jpg"
+        shutil.move(str(src_file), str(dest_file))
+    
+    # Clean up temp directory
+    if temp_dir.exists():
+        shutil.rmtree(temp_dir)
+    
+    print(f"  ✓ Moved {len(train_files)} images to train set")
+    print(f"  ✓ Moved {len(val_files)} images to val set")
+    
+    return len(downloaded_files)
 
 
 def main():
@@ -357,83 +341,30 @@ def main():
     # Define search queries for each category
     search_queries = {
         'bird': [
-            'eagle flying nature',
-            'parrot colorful bird',
-            'owl bird wildlife',
-            'sparrow small bird',
-            'hawk bird prey',
-            'seagull bird flight'
-        ],
-        'plane': [
-            'commercial airplane flying',
-            'fighter jet aircraft',
-            'boeing airplane',
-            'cessna small plane',
-            'military aircraft',
-            'passenger airplane'
-        ],
-        'superman': [
-            'superman flying hero',
-            'superman movie scene',
-            'man of steel superman',
-            'superman comic book',
-            'superman costume hero',
-            'clark kent superman'
+            'bird flying'
         ]
+        # 'plane': [
+        #     'commercial airplane flying',
+        #     'airplane'
+        # ],
+        # 'superman': [
+        #     'superman flying',
+        #     'superman'
+        # ]
     }
     
     # Check command line arguments
-    args = sys.argv[1:]
+    # args = sys.argv[1:]
     
     # Determine method
     method = None
-    bing_api_key = os.environ.get('BING_API_KEY')
-    unsplash_api_key = os.environ.get('UNSPLASH_API_KEY')
+    # bing_api_key = os.environ.get('BING_API_KEY')
+    # unsplash_api_key = os.environ.get('UNSPLASH_API_KEY')
     
-    if '--bing' in args:
-        if not bing_api_key:
-            print("❌ Bing API key not found!")
-            print("\n📝 To get a FREE Bing API key:")
-            print("   1. Go to https://portal.azure.com")
-            print("   2. Create 'Bing Search v7' resource (free tier: 1000 calls/month)")
-            print("   3. Copy an API key")
-            print("   4. Set environment variable:")
-            print("      Windows: $env:BING_API_KEY=\"your-key\"")
-            print("      Linux/Mac: export BING_API_KEY=\"your-key\"")
-            return
-        method = 'bing'
-        api_key = bing_api_key
-        print("🎯 Using Bing Image Search (best quality with API key)")
-        
-    elif '--unsplash' in args:
-        if not unsplash_api_key:
-            print("❌ Unsplash API key not found!")
-            print("\n📝 To get a FREE Unsplash API key:")
-            print("   1. Go to https://unsplash.com/developers")
-            print("   2. Create an application (free)")
-            print("   3. Copy the Access Key")
-            print("   4. Set environment variable:")
-            print("      Windows: $env:UNSPLASH_API_KEY=\"your-key\"")
-            print("      Linux/Mac: export UNSPLASH_API_KEY=\"your-key\"")
-            return
-        method = 'unsplash'
-        api_key = unsplash_api_key
-        print("🎯 Using Unsplash (highest quality images)")
-        
-    elif '--duckduckgo' in args or '--auto' in args or len(args) == 0:
-        method = 'duckduckgo'
-        api_key = None
-        print("🎯 Using DuckDuckGo (no API key needed!)")
-        print("💡 Tip: For better results, get a free Bing API key")
-        
-    else:
-        print("\n📋 Usage:")
-        print("  python download_images.py --duckduckgo    # No API key needed (default)")
-        print("  python download_images.py --bing          # Best quality (free API key)")
-        print("  python download_images.py --unsplash      # Highest quality (free API key)")
-        print("  python download_images.py --auto          # Auto-detect available method")
-        print("\n💡 Run without arguments to use DuckDuckGo (no API key needed)")
-        return
+    method = 'duckduckgo'
+    api_key = None
+    print("🎯 Using DuckDuckGo (no API key needed!)")
+    print("💡 Tip: For better results, get a free Bing API key")
     
     print(f"\n📁 Dataset directory: {base_dir}")
     print("\n⚙️  Configuration:")

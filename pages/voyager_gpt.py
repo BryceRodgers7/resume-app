@@ -2,6 +2,14 @@ import streamlit as st
 import requests
 import os
 
+# Page configuration
+st.set_page_config(
+    page_title="Custom GPT Model",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 st.title("🧠 Custom GPT Model (10M Parameters)")
 
 st.markdown("""
