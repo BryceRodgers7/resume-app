@@ -111,6 +111,30 @@ resume-app/
 
 ## 🌐 Deployment
 
+### ☁️ Fly.io (Recommended - Serverless)
+
+**Quick deployment in 5 minutes!** See [QUICKSTART_DEPLOYMENT.md](QUICKSTART_DEPLOYMENT.md)
+
+```bash
+# Install Fly.io CLI
+iwr https://fly.io/install.ps1 -useb | iex  # Windows
+curl -L https://fly.io/install.sh | sh      # Mac/Linux
+
+# Login and deploy
+flyctl auth login
+flyctl launch
+flyctl secrets set OPENAI_API_KEY="..." DATABASE_URL="..." # etc.
+flyctl deploy --ha=false
+```
+
+**Features**:
+- ✅ Serverless architecture (scales to zero)
+- ✅ Auto-scaling based on traffic
+- ✅ Built-in HTTPS & CDN
+- ✅ Pay-per-use pricing (~$0-5/month)
+
+For detailed instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)
+
 ### Streamlit Community Cloud
 
 1. Push your code to GitHub
@@ -121,9 +145,9 @@ resume-app/
 
 ### Other Options
 
-- **Heroku**: Use the Procfile and setup.sh
-- **Docker**: Create a Dockerfile with Python and Streamlit
+- **Docker**: Dockerfile included - `docker build -t resume-app .`
 - **AWS/GCP/Azure**: Deploy as a containerized app
+- **Heroku**: Deploy with container stack
 
 ## 🔐 Security Notes
 
