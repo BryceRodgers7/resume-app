@@ -15,8 +15,17 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies with optimizations
+# Install PyTorch CPU-only version (much smaller than CUDA version)
+RUN pip install --no-cache-dir \
+    torch==2.0.0+cpu \
+    torchvision==0.15.0+cpu \
+    --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt && \
+    # Remove unnecessary files to reduce image size
+    find /usr/local/lib/python3.11 -name "*.pyc" -delete && \
+    find /usr/local/lib/python3.11 -name "__pycache__" -type d -exec rm -rf {} + || true && \
+    rm -rf /root/.cache/pip
 
 # Copy the entire application
 COPY . .

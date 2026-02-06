@@ -21,19 +21,14 @@ primary_region = "iad"  # Washington, D.C. - change to your preferred region
   processes = ["app"]
 
   [[http_service.checks]]
-    grace_period = "10s"
+    grace_period = "60s"
     interval = "30s"
     method = "GET"
-    timeout = "5s"
+    timeout = "10s"
     path = "/_stcore/health"
 
 # VM resources
-[[vm]]
+[compute]
   cpu_kind = "shared"
   cpus = 2
-  memory_mb = 2048  # 2GB RAM - adjust based on your needs
-
-# Autoscaling configuration
-[metrics]
-  port = 8501
-  path = "/metrics"
+  memory = "2gb"
