@@ -18,14 +18,46 @@ st.set_page_config(
 
 # current_content = io.BytesIO()
 
-st.title("Prompted Pictures")
-st.write("please note that each submission costs 25 cents, so don't go crazy with it lol!")
+st.title("🎨 Text-to-Image Generation")
+
+st.markdown("""
+### AI-Powered Image Generation with Stability AI
+
+This demo showcases integration with **Stability AI's SD3 (Stable Diffusion 3)** model for text-to-image generation. 
+Enter a text prompt and watch as the AI creates a unique image based on your description.
+
+#### 🎯 What This Demonstrates
+
+- **External API Integration**: Direct integration with Stability AI's REST API
+- **File Handling**: Processing and displaying binary image data from API responses
+- **Caching Strategy**: Smart result caching to improve performance and reduce costs
+- **Error Handling**: NSFW content filtering and graceful error management
+- **Image Downloads**: User-friendly download functionality for generated images
+
+#### 🔧 How It Works
+
+1. **Enter a Prompt**: Describe the image you want to create (e.g., "A futuristic city at sunset")
+2. **Generate**: Click "See It!" to send your request to Stability AI's SD3 model
+3. **View & Download**: See your generated image and download it for use
+
+**Note**: Each generation costs me $0.25 through the Stability AI API, so don't go ham on it!
+
+#### 💡 Example Prompts to Try
+
+- "A serene mountain landscape with a crystal clear lake at dawn"
+- "A futuristic robot reading a book in a cozy library"
+- "An abstract painting combining blues and golds with geometric shapes"
+- "A medieval castle on a cliff overlooking the ocean"
+
+---
+""")
+
 parrot_path = './.static/parrot.jpg'
 parrot_caption = 'A beautiful parrot before a lush background of jungle canopy.'
 
 # get API key from environment variables
 if STABILITY_KEY := os.getenv('STABILITY_KEY'):
-    st.sidebar.success('API key is good.', icon='✅')
+    st.sidebar.success('Stability AI API key is good.', icon='✅')
 else:
     st.sidebar.warning('credentials are not working.', icon='⚠️')
 
@@ -112,7 +144,6 @@ img_prompt = st.text_area("What would you like to see?", parrot_caption)
 st.divider()
 click = st.button("See It!", help="submit your prompt and get an image", use_container_width=False)
 
-@st.fragment
 def fragment_function(img_BufferedReader):
     dl_click = st.download_button(
       label="Download Image",

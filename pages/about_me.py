@@ -18,8 +18,8 @@ This is a page where you'll learn all about me, Bryce Rodgers!
 """)
 
 photo_path = Path(__file__).parent.parent / '.static' / 'me.jpg'
-# display my photo
-st.image(photo_path, width=231, caption="Bryce Rodgers")
+# display my photo (convert Path to string for Streamlit compatibility)
+st.image(str(photo_path), width=231, caption="Bryce Rodgers")
 
 st.info("""
 I’m a senior software engineer with more than 15 years of experience building scalable backend systems, 

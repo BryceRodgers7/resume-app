@@ -66,6 +66,14 @@ st.markdown("""
         font-size: 0.85em;
     }
 </style>
+<script>
+    // Prevent auto-scroll on page load
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            window.scrollTo(0, 0);
+        }, 100);
+    });
+</script>
 """, unsafe_allow_html=True)
 
 
@@ -170,16 +178,56 @@ def render_tool_calls(tool_calls):
 initialize_session_state()
 
 # Header
-st.title("💬 Agentic Customer Support Chatbot")
+st.title("💬 Agentic Customer Support System")
+
 st.markdown("""
-This is an intelligent customer support chatbot for a fictional e-commerce store called Protis, that 
-uses agentic workflows to handle customer inquiries effectively. It is driven by a knowledge base of 
-procedures and instructions stored in a Qdrant vector database, and has access to a variety of 
-pre-programmed tools, as well as a product & orders database. You can view all the data yourself by clicking the 
-"View All Data Tables" button below.
-An architecture diagram of the agent is available [here](https://github.com/BryceRodgers7/AI-Portfolio/blob/main/docs/agent_architecture.png).
+### Sophisticated AI Agent with Tool Calling & RAG
+
+This is a **fully functional customer support agent** for "Protis," a fictional e-commerce store. The system demonstrates 
+enterprise-grade agentic AI architecture with autonomous tool usage, database integration, and knowledge base retrieval.
+
+#### 🎯 What This Demonstrates
+
+- **Agentic Architecture**: Autonomous AI agent that decides which tools to use based on user intent
+- **OpenAI Function Calling**: GPT-4 dynamically selects and executes tools from a library of 10+ functions
+- **RAG (Retrieval Augmented Generation)**: Vector database integration for knowledge base retrieval
+- **Multi-Database Architecture**: 
+  - **PostgreSQL** (Supabase): Transactional data (products, orders, returns, tickets)
+  - **Qdrant Vector DB**: Semantic search for SOPs, company policies, product troubleshooting and details
+- **Tool-Based Design**: Extendable architecture with separate tool schemas and implementations
+- **State Management**: Persistent conversation context and tool usage tracking (to see which tools the agent uses to answer your questions)
+- **Real-World Business Logic**: Order management, returns processing, product search, and customer support workflows
+
+#### 🔧 Available Capabilities
+
+The agent has access to 10+ tools including:
+- **Order Management**: Draft, place, modify, track, and cancel orders
+- **Product Operations**: Search products by name, category, price range, or availability
+- **Knowledge Base**: Semantic search through company policies and procedures
+- **Support Tickets**: Create and manage customer support issues
+- **Returns Processing**: Initiate and track return requests
+- **Shipping Calculations**: Get real-time shipping costs
+- **And more**: View all available tools in the sidebar →
+
+#### 💡 Try These Interactions
+
+- "I want to order 2 wireless headphones and have them shipped to New York"
+- "What's your return policy?"
+- "I need to cancel order #1001"
+- "Show me computer monitors under $500"
+- "Track the status of my recent order"
+- View the backend data for reference and see it change due to the agent's actions!
+
+The agent will automatically determine which tools to call, retrieve relevant information, and provide natural language responses.
+
+---
 """)
-st.caption("Powered by OpenAI GPT-4 with function calling and the Protis knowledge base")
+
+st.info("📊 **Behind the Scenes**: Click the 'Tools Used' expander within the responses to see the full execution details. Watch the sidebar to see how many tool calls total the agent has used. ")
+
+st.caption("Powered by OpenAI GPT-4 with function calling | PostgreSQL (Supabase) | Qdrant Vector Database")
+
+st.divider()
 
 # Sidebar
 render_sidebar()
