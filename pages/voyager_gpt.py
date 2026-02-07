@@ -20,7 +20,7 @@ st.title("🧠 VoyagerGPT: Custom-Trained Language Model")
 st.markdown("""
 ### 10-Million Parameter GPT Model Trained from Scratch
 
-This is a **custom-built GPT (Generative Pre-trained Transformer)** with 10 million parameters that I trained from scratch. 
+This is a **custom-built GPT (Generative Pre-trained Transformer)** with 10 million parameters that I built and trained from scratch. 
 The model demonstrates understanding of transformer architecture, model training pipelines, and cloud deployment of ML inference services.
 
 #### 🎯 What This Demonstrates

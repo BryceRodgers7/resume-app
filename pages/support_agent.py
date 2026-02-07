@@ -20,7 +20,9 @@ st.set_page_config(
 logger = logging.getLogger(__name__)
 
 # Check if we should show the data views instead
-show_data_views = st.query_params.get("view") == "data"
+# Use experimental API for compatibility with Streamlit 1.29
+query_params = st.experimental_get_query_params()
+show_data_views = query_params.get("view", [None])[0] == "data"
 
 # If showing data views, load and execute that module instead
 if show_data_views:
