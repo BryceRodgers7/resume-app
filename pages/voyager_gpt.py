@@ -69,7 +69,7 @@ with st.expander("💡 Try it Out", expanded=False):
     - **Append feature**: Build longer narratives by generating iteratively
     """)
 
-st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). The API wakes up on first request (~5-10 second cold start). Generation may take 30 seconds or more.")
+st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). The API wakes up on first request (~10-30 second cold start to load the model). Generation may take 30 seconds or more.")
 
 st.divider()
 
@@ -84,13 +84,17 @@ if "api_health_checked" not in st.session_state:
 
 if not st.session_state.api_health_checked:
     try:
-        response = requests.get(f"{API_URL}/health", timeout=5)
+        # Use longer timeout for cold starts (Cloud Run may need time to wake up)
+        response = requests.get(f"{API_URL}/health", timeout=30)
         if response.status_code == 200:
             st.session_state.api_healthy = True
             st.session_state.api_status_message = "✅ API is connected and ready!"
         else:
             st.session_state.api_healthy = False
             st.session_state.api_status_message = f"❌ API returned status {response.status_code}"
+    except requests.exceptions.Timeout:
+        st.session_state.api_healthy = False
+        st.session_state.api_status_message = "⏱️ API health check timed out (cold start may need more time). Try refreshing."
     except Exception as e:
         st.session_state.api_healthy = False
         st.session_state.api_status_message = f"❌ Could not connect to API: {str(e)}"
