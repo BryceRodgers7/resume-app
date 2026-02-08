@@ -261,7 +261,7 @@ with col2:
     # Button to open all data views in a new browser tab
     components.html("""
         <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-            <button onclick="window.open('/customer_support?view=data', '_blank')" style="
+            <button onclick="window.open('/support_agent?view=data', '_blank')" style="
                 padding: 0.5rem 1rem;
                 background-color: #FF4B4B;
                 color: white;
