@@ -96,7 +96,7 @@ temp/
 *.pkl
 *.h5
 *.ckpt
-models/*.pth
+# models/*.pth  # Commented out - we need the trained model in production!
 
 # OS
 .DS_Store
