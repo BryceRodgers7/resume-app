@@ -21,45 +21,53 @@ st.markdown("""
 ### 10-Million Parameter GPT Model Trained from Scratch
 
 This is a **custom-built GPT (Generative Pre-trained Transformer)** with 10 million parameters that I built and trained from scratch. 
-The model demonstrates understanding of transformer architecture, model training pipelines, and cloud deployment of ML inference services.
-
-#### 🎯 What This Demonstrates
-
-- **Deep Learning Fundamentals**: Built and trained a transformer-based language model from the ground up
-- **Model Training**: Custom training pipeline with PyTorch, including:
-  - Tokenization and vocabulary building
-  - Attention mechanisms and positional encoding
-  - Loss calculation and optimization
-  - Hyperparameter tuning
-- **MLOps & Deployment**: Model deployed as a REST API on Google Cloud Run with containerization
-- **Character-Level Generation**: Model generates text character-by-character for simplicity and fine-grained control
-- **API Design**: RESTful endpoints for text generation and vocabulary inspection
-- **Cloud Infrastructure**: Serverless deployment with automatic scaling and cost optimization
-
-#### 🔧 Technical Architecture
-
-**Model Specifications:**
-- **Parameters**: 10 million trainable parameters
-- **Architecture**: GPT-style decoder-only transformer
-- **Training**: Custom dataset with domain-specific content
-- **Inference**: Hosted on Google Cloud Run (serverless)
-- **API**: FastAPI with Pydantic validation
-
-**Generation Controls:**
-- **Seed**: Reproducible generation for testing and debugging
-- **Temperature**: Control creativity vs. consistency (0.01-2.0)
-- **Max Tokens**: Configurable output length (1-500 tokens)
-- **Context**: Optional prompt to guide generation
-
-#### 💡 Try It Out
-
-1. **Configure Parameters** in the sidebar (or use defaults)
-2. **Add Context** in the sidebar (optional): Provide starting text to guide the model
-3. **Generate**: Click "Generate Text" below to see the model in action
-4. **Experiment**: Try different temperatures and contexts to see how they affect output
-
----
+It demonstrates understanding of transformer architecture, model training pipelines, and cloud deployment of ML inference services.
 """)
+
+with st.expander("🎯 What This Demonstrates", expanded=False):
+    st.markdown("""
+    - **Deep Learning Fundamentals**: Built and trained a transformer-based language model from the ground up
+    - **Model Training**: Custom training pipeline with PyTorch, including:
+      - Tokenization and vocabulary building
+      - Attention mechanisms and positional encoding
+      - Loss calculation and optimization
+      - Hyperparameter tuning
+    - **MLOps & Deployment**: Model deployed as a REST API on Google Cloud Run with containerization
+    - **Character-Level Generation**: Model generates text character-by-character for fine-grained control
+    - **API Design**: RESTful endpoints for text generation and vocabulary inspection
+    - **Cloud Infrastructure**: Serverless deployment with automatic scaling and cost optimization
+    """)
+
+with st.expander("🔧 Technical Architecture", expanded=False):
+    st.markdown("""
+    **Model Specifications:**
+    - **Parameters**: 10 million trainable parameters
+    - **Architecture**: GPT-style decoder-only transformer
+    - **Training**: Custom dataset with domain-specific content
+    - **Inference**: Hosted on Google Cloud Run (serverless)
+    - **API**: FastAPI with Pydantic validation
+
+    **Generation Controls:**
+    - **Seed**: Reproducible generation for testing and debugging
+    - **Temperature**: Control creativity vs. consistency (0.01-2.0)
+    - **Max Tokens**: Configurable output length (1-500 tokens)
+    - **Context**: Optional prompt to guide generation
+    """)
+
+with st.expander("💡 Try it Out", expanded=False):
+    st.markdown("""
+    **Example Contexts:**
+    - "Once upon a time in a distant galaxy"
+    - "In the year 2372, voyager encounters an undiscovered wormhole"
+    - "PARIS: Warp engines are offline!"
+    - "Captain's log, stardate"51390.4"
+    
+    **Tips:**
+    - **Lower temperature (0.3-0.7)**: More coherent, focused text
+    - **Higher temperature (1.0-2.0)**: More creative, random text
+    - **Same seed + parameters**: Reproducible output for testing
+    - **Append feature**: Build longer narratives by generating iteratively
+    """)
 
 st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). The API wakes up on first request (~5-10 second cold start). Generation may take 30 seconds or more.")
 

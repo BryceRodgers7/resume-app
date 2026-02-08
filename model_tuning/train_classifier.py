@@ -47,17 +47,27 @@ def get_data_transforms():
     """Define image transformations for training and validation"""
     data_transforms = {
         'train': transforms.Compose([
+            # Randomly crop and resize to 224x224 - adds scale and position variance for data augmentation
             transforms.RandomResizedCrop(CONFIG['img_size']),
+            # Randomly flip images horizontally with 50% probability - helps model learn orientation invariance
             transforms.RandomHorizontalFlip(),
+            # Randomly rotate images up to 15 degrees in either direction - handles slight angle variations
             transforms.RandomRotation(15),
+            # Randomly adjust brightness, contrast, and saturation - makes model robust to lighting conditions
             transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            # Convert PIL image to PyTorch tensor with values in range [0, 1]
             transforms.ToTensor(),
+            # Normalize using ImageNet mean and std dev - required for pretrained ResNet models
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
+            # Resize shortest side to 256 pixels while maintaining aspect ratio
             transforms.Resize(256),
+            # Crop center 224x224 region - deterministic for consistent validation
             transforms.CenterCrop(CONFIG['img_size']),
+            # Convert PIL image to PyTorch tensor with values in range [0, 1]
             transforms.ToTensor(),
+            # Normalize using ImageNet mean and std dev - must match training normalization
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
     }

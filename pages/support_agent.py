@@ -187,45 +187,62 @@ st.markdown("""
 
 This is a **fully functional customer support agent** for "Protis," a fictional e-commerce store. The system demonstrates 
 enterprise-grade agentic AI architecture with autonomous tool usage, database integration, and knowledge base retrieval.
-
-#### 🎯 What This Demonstrates
-
-- **Agentic Architecture**: Autonomous AI agent that decides which tools to use based on user intent
-- **OpenAI Function Calling**: GPT-4 dynamically selects and executes tools from a library of 10+ functions
-- **RAG (Retrieval Augmented Generation)**: Vector database integration for knowledge base retrieval
-- **Multi-Database Architecture**: 
-  - **PostgreSQL** (Supabase): Transactional data (products, orders, returns, tickets)
-  - **Qdrant Vector DB**: Semantic search for SOPs, company policies, product troubleshooting and details
-- **Tool-Based Design**: Extendable architecture with separate tool schemas and implementations
-- **State Management**: Persistent conversation context and tool usage tracking (to see which tools the agent uses to answer your questions)
-- **Real-World Business Logic**: Order management, returns processing, product search, and customer support workflows
-
-#### 🔧 Available Capabilities
-
-The agent has access to 10+ tools including:
-- **Order Management**: Draft, place, modify, track, and cancel orders
-- **Product Operations**: Search products by name, category, price range, or availability
-- **Knowledge Base**: Semantic search through company policies and procedures
-- **Support Tickets**: Create and manage customer support issues
-- **Returns Processing**: Initiate and track return requests
-- **Shipping Calculations**: Get real-time shipping costs
-- **And more**: View all available tools in the sidebar →
-
-#### 💡 Try These Interactions
-
-- "I want to order 2 wireless headphones and have them shipped to New York"
-- "What's your return policy?"
-- "I need to cancel order #1001"
-- "Show me computer monitors under $500"
-- "Track the status of my recent order"
-- View the backend data for reference and see it change due to the agent's actions!
-
-The agent will automatically determine which tools to call, retrieve relevant information, and provide natural language responses.
-
----
 """)
 
-st.info("📊 **Behind the Scenes**: Click the 'Tools Used' expander within the responses to see the full execution details. Watch the sidebar to see how many tool calls total the agent has used. ")
+with st.expander("🎯 What This Demonstrates", expanded=False):
+    st.markdown("""
+    - **Agentic Architecture**: Autonomous AI agent that decides which tools to use based on user intent
+    - **OpenAI Function Calling**: GPT-4 dynamically selects and executes tools from a library of 10+ functions
+    - **RAG (Retrieval Augmented Generation)**: Vector database integration for knowledge base retrieval
+    - **Multi-Database Architecture**: 
+      - **PostgreSQL** (Supabase): Transactional data (products, orders, returns, tickets)
+      - **Qdrant Vector DB**: Semantic search for SOPs, company policies, product troubleshooting and details
+    - **Tool-Based Design**: Extendable architecture with separate tool schemas and implementations
+    - **State Management**: Persistent conversation context and tool usage tracking
+    - **Real-World Business Logic**: Order management, returns processing, product search, and customer support workflows
+    """)
+
+with st.expander("🔧 Available Capabilities", expanded=False):
+    st.markdown("""    
+    The agent has access to 10+ tools including:
+    - **Order Management**: Draft, place, modify, track, and cancel orders
+    - **Product Operations**: Search products by name, category, price range, or availability
+    - **Knowledge Base**: Semantic search through company policies and procedures
+    - **Support Tickets**: Create and manage customer support issues
+    - **Returns Processing**: Initiate and track return requests
+    - **Shipping Calculations**: Get real-time shipping costs
+    - View all available tools in the sidebar →
+    
+    **Technical Flow:**
+    1. User sends a message
+    2. Agent analyzes intent and available tools
+    3. GPT-4 decides which tools to call via function calling
+    4. Tools execute (database queries, vector search, etc.)
+    5. Results synthesized into natural language response
+    6. Tool usage tracked in sidebar
+    """)
+
+with st.expander("💡 Try These Interactions", expanded=False):
+    st.markdown("""
+    **Order Management:**
+    - "I want to order 2 wireless headphones and have them shipped to New York"
+    - "I need to cancel order #1001"
+    - "Track the status of my recent order"
+    
+    **Product Search:**
+    - "Show me computer monitors under $500"
+    - "What wireless headphones do you have in stock?"
+    - "Find me smartphones with at least 128GB storage"
+    
+    **Policies & Support:**
+    - "What's your return policy?"
+    - "How long does shipping take?"
+    - "I need help with a defective product"
+    
+    **Tip:** View the backend data for reference and see it change due to the agent's actions!
+    """)
+
+st.info("📊 **Behind the Scenes**: Click the 'Tools Used' expander within the responses to see the full execution details. Watch the sidebar to see how many tool calls total the agent has used.")
 
 st.caption("Powered by OpenAI GPT-4 with function calling | PostgreSQL (Supabase) | Qdrant Vector Database")
 

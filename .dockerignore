@@ -94,7 +94,6 @@ temp/
 
 # Large binary files
 *.pkl
-*.pth
 *.h5
 *.ckpt
 models/*.pth

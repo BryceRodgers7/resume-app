@@ -24,29 +24,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-### Interactive AI Chat with a customizable System Prompt
+### Interactive AI Chat with a Customizable System Prompt
 
 This demo showcases **OpenAI GPT-3.5-turbo** integration with a fully customizable system prompt. 
-The chatbot demonstrates real-time streaming responses and dynamic personality control through prompt engineering (for now, it thinks it's a pirate, but you can change that!)
-
-#### 🎯 What This Demonstrates
-
-- **OpenAI API Integration**: Direct API calls with streaming responses for real-time user experience
-- **Prompt Engineering**: Modify the system prompt in the sidebar to instantly change the AI's personality and behavior
-- **State Management**: Persistent conversation history and settings using Streamlit's session state
-- **UI/UX Design**: Clean chat interface with real-time streaming indicators
-
-#### 🔧 Try It Out
-
-1. **Chat with the AI**: Ask questions, have conversations, or just say hello!
-2. **Customize the System Prompt** (sidebar): Change how the AI behaves—make it a professional consultant, a sentient robot like C3PO, or keep it as a pirate!
-3. **See Real-Time Streaming**: Watch responses generate character-by-character
-4. **Clear and Restart**: Test different prompts and conversation flows
-
-By default, the AI speaks like a pirate 🏴‍☠️—but you control the personality entirely through the system prompt.
-
----
+The chatbot demonstrates real-time streaming responses and dynamic personality control through prompt engineering (right now it thinks it's a pirate, but you can change that!)
 """)
+
+with st.expander("🎯 What This Demonstrates", expanded=False):
+    st.markdown("""
+    - **OpenAI API Integration**: Direct API calls with streaming responses for real-time user experience
+    - **Prompt Engineering**: Modify the system prompt in the sidebar to instantly change the AI's personality and behavior
+    - **State Management**: Persistent conversation history and settings using Streamlit's session state
+    - **Error Handling**: Graceful degradation and user-friendly error messages
+    - **UI/UX Design**: Clean chat interface with real-time streaming indicators
+    """)
+
+with st.expander("🔧 Try It Out", expanded=False):
+    st.markdown("""
+    1. **Chat with the AI**: Ask questions, have conversations, or just say hello!
+    2. **Customize the System Prompt** (sidebar): Change how the AI behaves—make it a professional consultant, a sentient robot like C3PO, or keep it as a pirate!
+    3. **See Real-Time Streaming**: Watch responses generate character-by-character
+    4. **Clear and Restart**: Test different prompts and conversation flows
+
+    By default, the AI speaks like a pirate 🏴‍☠️—but you control the personality entirely through the system prompt.
+    """)
+
+
 
 st.write("Ready to chat? Try asking about the ocean, buried treasure, or anything else!")
 

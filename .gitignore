@@ -49,7 +49,6 @@ venv.bak/
 
 # Model files (large files)
 *.pt
-*.pth
 *.h5
 *.pkl
 *.ckpt
