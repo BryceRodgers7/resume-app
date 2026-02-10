@@ -57,9 +57,9 @@ with st.expander("🔧 Technical Architecture", expanded=False):
 with st.expander("💡 Try it Out", expanded=False):
     st.markdown("""
     **Example Contexts:**
-    - "Voyager encounters an undiscovered wormhole"
-    - "PARIS: Warp engines are offline!"
-    - "JANEYWAY: Captain's log, stardate 51390.4"
+    - Voyager encounters an undiscovered wormhole
+    - PARIS: Warp engines are offline!
+    - JANEYWAY: Captain's log, stardate 51390.4
     
     **Tips:**
     - **Lower temperature (0.3-0.7)**: More coherent, focused text
@@ -269,13 +269,13 @@ if st.session_state.show_results and st.session_state.result_data:
         
         # Display generated text
         st.markdown("### 📝 Generated Text")
+        # Don't use a key - let Streamlit handle the widget naturally
         st.text_area(
             "Output",
             value=result_data["text"],
             height=300,
             disabled=True,
-            label_visibility="collapsed",
-            key="output_display"
+            label_visibility="collapsed"
         )
         
         # Callback function for append button

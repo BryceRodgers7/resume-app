@@ -52,14 +52,15 @@ def home_page():
     st.title("Welcome to My AI Portfolio 🤖")
 
     st.markdown("""
-    ## About Me
-
-    Welcome! I'm a senior software engineer with a passion for AI/ML, serverless architectures, backend systems, 
+    <p style="font-size: 16px;">
+    I'm a senior software engineer with a passion for AI/ML, serverless architectures, backend systems, 
     trading, an MBA and a US Patent to top it all off. 
     This portfolio showcases several AI/ML projects I've developed that demonstrate full-stack capabilities, 
     from user-facing applications and backend services to cloud deployment, data architecture, and machine learning systems.
-    ---
-    """)
+    </p>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
 
     # Create columns for better layout
     col1, col2 = st.columns(2)
