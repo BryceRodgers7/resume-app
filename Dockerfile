@@ -4,6 +4,8 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
+# Force rebuild to fix Streamlit version issue - 2026-02-10
+
 # Install system dependencies needed for some Python packages
 RUN apt-get update && apt-get install -y \
     build-essential \
