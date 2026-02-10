@@ -18,17 +18,19 @@ st.set_page_config(
 st.title("🖼️ Is It a Bird? Is It a Plane? 🦸")
 
 st.markdown("""
-### Custom Image Classifier with Transfer Learning & Confidence Thresholding
+### Custom Image Classifier with Transfer Learning & Entropy-Based Uncertainty Detection
 
 This is a **custom-trained image classification model** built with PyTorch using transfer learning. The model demonstrates 
-practical computer vision implementation, including training pipeline design, confidence thresholding, and production-ready inference.
+practical computer vision implementation, including training pipeline design, entropy-based out-of-distribution detection, and production-ready inference.
 """)
 
 with st.expander("🎯 What This Demonstrates", expanded=False):
     st.markdown("""
     - **Transfer Learning**: Fine-tuned ResNet18 architecture pre-trained on ImageNet for custom classification
     - **PyTorch Implementation**: Complete training pipeline with data augmentation, optimization, and model persistence
-    - **Confidence Thresholding**: Smart "other" class detection without explicit training data—predictions below threshold are rejected
+    - **Dual OOD Detection Strategy**: 
+      - **Explicit "Other" Class**: Trained on diverse out-of-distribution images
+      - **Entropy-Based Detection**: Uses prediction entropy to identify uncertain/anomalous inputs
     - **Model Deployment**: Serialized model loading, preprocessing pipeline, and inference serving in production
     - **Computer Vision Best Practices**: 
       - Image preprocessing and normalization
@@ -42,22 +44,33 @@ with st.expander("🔧 Technical Architecture", expanded=False):
     **Model Specifications:**
     - **Base Architecture**: ResNet18 (pre-trained on ImageNet)
     - **Custom Head**: 512-neuron fully connected layer with ReLU + Dropout (0.3)
-    - **Classes**: 3 trained categories (bird, plane, superman) + confidence threshold for "other"
+    - **Classes**: 4 trained categories (bird, plane, superman, other)
     - **Input**: 224x224 RGB images with ImageNet normalization
     - **Framework**: PyTorch with torchvision transforms
     
     **Training Pipeline:**
     - Data augmentation (resize, crop, random flips, color jitter)
-    - Transfer learning with frozen/unfrozen layers
+    - Transfer learning with frozen early layers
     - CrossEntropyLoss optimization with Adam
     - Validation-based checkpointing
     - [View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)
     
-    **Confidence Thresholding:**
-    Instead of training an "other" class, this model uses **confidence thresholding**:
-    - Predictions above threshold → classified as predicted category
-    - All predictions below threshold → classified as "other"
-    - More robust than training on miscellaneous "other" data
+    **Dual Out-of-Distribution (OOD) Detection:**
+    This model uses **two complementary strategies** to detect unfamiliar images:
+    
+    1. **Explicit "Other" Class Training**: 
+       - Trained on diverse images (cars, people, landscapes, etc.)
+       - Learns explicit patterns of what is NOT bird/plane/superman
+    
+    2. **Entropy-Based Uncertainty Detection**:
+       - Calculates prediction entropy: H = -Σ(p_i * log(p_i))
+       - High entropy (flat probability distribution) → model is uncertain
+       - Example: [0.25, 0.25, 0.25, 0.25] has high entropy (very uncertain)
+       - Example: [0.9, 0.05, 0.03, 0.02] has low entropy (very confident)
+       - Images with high entropy are reclassified as "other"
+       - More robust to novel image types not seen during training
+    
+    This **layered approach** provides better protection against false positives on out-of-distribution images.
     """)
 
 with st.expander("💡 Try it Out", expanded=False):
@@ -66,22 +79,28 @@ with st.expander("💡 Try it Out", expanded=False):
     - 🐦 **Birds**: Sparrows, eagles, parrots, penguins, etc.
     - ✈️ **Planes**: Commercial jets, fighter jets, propeller planes, helicopters
     - 🦸 **Superman**: Images of the Man of Steel in action
-    - 📦 **Other**: Anything else (detected via confidence threshold)
+    - 📦 **Other**: Anything else (detected via trained "other" class + entropy analysis)
     
     **Tips for Best Results:**
     - Use clear, well-lit images with visible subjects
     - Avoid heavily cropped or blurry photos
     - The model works best with images similar to training data
-    - Watch the confidence breakdown to see how certain the model is
+    - Watch the **entropy metric** - it tells you how uncertain the model is
+    - Try uploading completely unrelated images (cars, food, people) to see the OOD detection in action!
+    
+    **What to Expect:**
+    - Images clearly matching a category → Low entropy, high confidence
+    - Ambiguous/unfamiliar images → High entropy, classified as "other"
+    - The model now has **two layers of protection** against false positives
     """)
 
-st.info("🧠 **Model Training Code**: Check out the complete training pipeline and scripts on [GitHub in the `model_tuning/` folder](https://github.com/BryceRodgers7/resume-app/tree/main/model_tuning)!")
+st.info("🧠 **Model Training Code**: Check out the complete training pipeline and scripts on [GitHub in the  `model_tuning/`  folder](https://github.com/BryceRodgers7/resume-app/tree/main/model_tuning)!")
 
 st.divider()
 
 # Model configuration
-MODEL_PATH = Path(__file__).parent.parent / 'models' / 'bird_plane_superman_classifier_latest.pth'
-METADATA_PATH = Path(__file__).parent.parent / 'models' / 'classifier_metadata.json'
+MODEL_PATH = Path(__file__).parent.parent / 'models' / 'bird_plane_superman_other_classifier_latest.pth'
+METADATA_PATH = Path(__file__).parent.parent / 'models' / 'bird_plane_superman_other_classifier_metadata.json'
 
 @st.cache_resource
 def load_model():
@@ -93,12 +112,12 @@ def load_model():
                 metadata = json.load(f)
             class_names = metadata['class_names']
             num_classes = metadata['num_classes']
-            confidence_threshold = metadata.get('confidence_threshold', 0.6)
+            entropy_threshold = metadata.get('entropy_threshold', 0.7)
         else:
-            # Default fallback
-            class_names = ['bird', 'plane', 'superman']
-            num_classes = 3
-            confidence_threshold = 0.6
+            # Default fallback - assume 4-class model
+            class_names = ['bird', 'other', 'plane', 'superman']
+            num_classes = 4
+            entropy_threshold = 0.7
         
         # Create model architecture (must match training)
         model = models.resnet18(pretrained=False)
@@ -114,13 +133,13 @@ def load_model():
         if MODEL_PATH.exists():
             model.load_state_dict(torch.load(MODEL_PATH, map_location='cpu'))
             model.eval()
-            return model, class_names, confidence_threshold, True
+            return model, class_names, entropy_threshold, True
         else:
-            return None, class_names, confidence_threshold, False
+            return None, class_names, entropy_threshold, False
             
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
-        return None, ['bird', 'plane', 'superman'], 0.6, False
+        return None, ['bird', 'other', 'plane', 'superman'], 0.7, False
 
 def preprocess_image(image):
     """Preprocess image for model input"""
@@ -140,28 +159,47 @@ def preprocess_image(image):
     img_tensor = transform(image).unsqueeze(0)
     return img_tensor
 
-def predict(model, image_tensor, class_names, confidence_threshold):
-    """Make prediction on image with confidence thresholding"""
+def predict(model, image_tensor, class_names, entropy_threshold):
+    """Make prediction on image with entropy-based uncertainty detection"""
     with torch.no_grad():
         outputs = model(image_tensor)
         probabilities = torch.nn.functional.softmax(outputs, dim=1)
         confidence, predicted_idx = torch.max(probabilities, 1)
         
         confidence_score = confidence.item()
+        predicted_idx_val = predicted_idx.item()
         
-        # Check if confidence is above threshold
-        if confidence_score < confidence_threshold:
-            predicted_class = 'other'
-        else:
-            predicted_class = class_names[predicted_idx.item()]
+        # Calculate entropy for uncertainty detection
+        # Entropy = -Σ(p_i * log(p_i))
+        # High entropy means the model is uncertain (probabilities are spread out)
+        log_probs = torch.log(probabilities + 1e-10)  # Add small value to avoid log(0)
+        entropy = -torch.sum(probabilities * log_probs, dim=1)
+        
+        # Normalize entropy to [0, 1] range
+        max_entropy = np.log(len(class_names))
+        normalized_entropy = entropy.item() / max_entropy
         
         # Get all class probabilities
         all_probs = probabilities[0].numpy()
         
-    return predicted_class, confidence_score, all_probs
+        # Determine predicted class using entropy-based detection
+        predicted_class = class_names[predicted_idx_val]
+        
+        # If entropy is high, the model is uncertain -> classify as "other"
+        # This catches cases where probabilities are spread out (e.g., [0.3, 0.25, 0.25, 0.2])
+        if normalized_entropy > entropy_threshold:
+            predicted_class = 'other'
+            detection_reason = 'high_entropy'
+        # If model already predicted "other" class, keep it
+        elif predicted_class == 'other':
+            detection_reason = 'predicted_other'
+        else:
+            detection_reason = 'confident_prediction'
+        
+    return predicted_class, confidence_score, all_probs, normalized_entropy, detection_reason
 
 # Load model
-model, class_names, confidence_threshold, model_loaded = load_model()
+model, class_names, entropy_threshold, model_loaded = load_model()
 
 # Sidebar - Model Status
 with st.sidebar:
@@ -195,7 +233,9 @@ if uploaded_file:
             with st.spinner("Analyzing image..."):
                 # Preprocess and predict
                 img_tensor = preprocess_image(image)
-                predicted_class, confidence, all_probs = predict(model, img_tensor, class_names, confidence_threshold)
+                predicted_class, confidence, all_probs, entropy, detection_reason = predict(
+                    model, img_tensor, class_names, entropy_threshold
+                )
                 
                 # Display result with emoji
                 emoji_map = {
@@ -209,29 +249,61 @@ if uploaded_file:
                 
                 # Main prediction
                 st.markdown(f"## {emoji} **{predicted_class.upper()}** {emoji}")
-                st.metric("Confidence", f"{confidence * 100:.1f}%")
+                
+                # Show metrics in columns
+                metric_col1, metric_col2 = st.columns(2)
+                with metric_col1:
+                    st.metric("Confidence", f"{confidence * 100:.1f}%")
+                with metric_col2:
+                    st.metric("Entropy", f"{entropy:.3f}", 
+                             help="Lower entropy = more certain. Higher entropy = more uncertain/spread out probabilities")
                 
                 # Progress bar for confidence
                 st.progress(confidence)
+                
+                # Show detection reasoning
+                if detection_reason == 'high_entropy':
+                    st.warning(f"⚠️ **High Uncertainty Detected** (entropy: {entropy:.3f} > {entropy_threshold:.2f})")
+                    st.caption("The model's predictions are spread across multiple classes, indicating this image doesn't clearly match any trained category.")
+                elif detection_reason == 'predicted_other':
+                    st.info("📦 **Classified as 'Other'** - The model learned this doesn't match bird/plane/superman patterns")
+                else:
+                    st.success(f"✅ **Confident Prediction** (entropy: {entropy:.3f} ≤ {entropy_threshold:.2f})")
                 
                 # Show all class probabilities
                 st.markdown("### 📊 Confidence Breakdown:")
                 for idx, class_name in enumerate(class_names):
                     prob = all_probs[idx]
                     emoji_icon = emoji_map.get(class_name, '❓')
-                    
-                    # Highlight if below threshold
-                    threshold_note = ""
-                    if prob == confidence and prob < confidence_threshold:
-                        threshold_note = f" (below {confidence_threshold*100:.0f}% threshold)"
-                    
-                    st.write(f"{emoji_icon} **{class_name.capitalize()}**: {prob * 100:.1f}%{threshold_note}")
+                    st.write(f"{emoji_icon} **{class_name.capitalize()}**: {prob * 100:.1f}%")
                     st.progress(float(prob))
                 
-                # Show threshold info
-                st.info(f"📏 **Confidence Threshold**: {confidence_threshold*100:.0f}% - Predictions below this are classified as 'other'")
+                # Show technical details in expander
+                with st.expander("🔬 Technical Details"):
+                    st.markdown(f"""
+                    **Prediction Metrics:**
+                    - **Max Confidence**: {confidence * 100:.2f}%
+                    - **Normalized Entropy**: {entropy:.4f} (threshold: {entropy_threshold:.2f})
+                    - **Detection Method**: {detection_reason.replace('_', ' ').title()}
+                    
+                    **Entropy Interpretation:**
+                    - Entropy near 0.0 = Very certain (one class has ~100% probability)
+                    - Entropy near 0.5 = Moderate uncertainty
+                    - Entropy near 1.0 = Very uncertain (probabilities spread evenly)
+                    
+                    **Current Distribution:**
+                    """)
+                    
+                    # Show if distribution is uniform or peaked
+                    max_prob = max(all_probs)
+                    min_prob = min(all_probs)
+                    if max_prob - min_prob < 0.2:
+                        st.caption("⚖️ Flat distribution - model is very uncertain")
+                    else:
+                        st.caption("📊 Peaked distribution - model has a clear preference")
                 
                 # Fun message based on result
+                st.divider()
                 if predicted_class == 'superman':
                     st.balloons()
                     st.success("🦸‍♂️ It's Superman! Faster than a speeding bullet!")
@@ -240,6 +312,6 @@ if uploaded_file:
                 elif predicted_class == 'plane':
                     st.info("✈️ It's a plane! Ready for takeoff!")
                 else:
-                    st.info(f"📦 It's something else! None of the classes matched with sufficient confidence (>{confidence_threshold*100:.0f}%)")
+                    st.info("📦 This image doesn't clearly match any of the trained categories (bird/plane/superman)")
 
 

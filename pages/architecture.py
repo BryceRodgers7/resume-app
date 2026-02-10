@@ -28,21 +28,32 @@ st.markdown("""
 
 This portfolio application is built using a **modern, serverless architecture** that leverages 
 fully managed cloud services. The system is designed with the following key infrastructure:
+            """)
 
+deployment_col1, deployment_col2 = st.columns(2)
+
+with deployment_col1:
+    st.markdown("""
 #### ☁️ Deployment Infrastructure
 - **Fly.io**: Frontend hosting (Streamlit in Docker container)
 - **Supabase**: Managed PostgreSQL database
 - **Qdrant Cloud**: Vector database for knowledge base
 - **Google Cloud Run**: Serverless backend for Custom GPT API
 - **OpenAI & Stability AI**: External API services
+    
+    """)
 
+with deployment_col2:
+    st.markdown("""
 #### 🔑 Key Benefits of Serverless
 - ✅ **Automatic Scaling**: All services scale based on demand
 - ✅ **Pay-per-Use**: Only pay for actual resource consumption
 - ✅ **No Server Management**: Focus on code, not infrastructure
 - ✅ **High Availability**: Built-in redundancy and failover
 - ✅ **Global Performance**: Low latency worldwide
-""")
+
+    """)
+
 
 st.divider()
 
@@ -60,11 +71,11 @@ if svg_path.exists():
     # Display SVG using HTML iframe for better rendering
     components.html(
         f"""
-        <div style="width: 100%; height: 950px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
+        <div style="width: 100%; height: 1400px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
             {svg_content}
         </div>
         """,
-        height=1300,
+        height=1450,
         scrolling=True
     )
 else:
@@ -83,25 +94,20 @@ with col1:
     #### ☁️ Fly.io - Frontend Hosting
     **Streamlit Application in Docker**
     - Multi-page Streamlit app
-    - Customer Support chatbot (agentic)
-    - Pirate Chatbot (simple conversational AI)
-    - Custom GPT Model interface
-    - Image Classifier (PyTorch inference)
-    - Text-to-Image generator
-    - Data visualization dashboard
     - Automatic horizontal scaling
+    - Stateful conversation history for chatbots
+    - Functional interactions 
+    - Data visualization dashboard
     """)
-    
+
     st.markdown("""
-    #### ☁️ Supabase - Database Hosting
-    **Managed PostgreSQL**
-    - Products catalog
-    - Order management
-    - Returns processing
-    - Support ticket tracking
-    - Automatic backups
-    - Connection pooling
-    - Real-time capabilities
+    #### ☁️ Google Cloud Run - Serverless Backend
+    **Custom GPT Model API**
+    - 10M parameter GPT model
+    - Character-level generation
+    - Auto-scaling containers
+    - Pay-per-request pricing
+    - Zero idle costs
     """)
 
 with col2:
@@ -117,122 +123,16 @@ with col2:
     """)
     
     st.markdown("""
-    #### ☁️ Google Cloud Run - Serverless Backend
-    **Custom GPT Model API**
-    - 10M parameter GPT model
-    - Character-level generation
-    - Auto-scaling containers
-    - Pay-per-request pricing
-    - Zero idle costs
+    #### ☁️ Supabase - Database Hosting
+    **Managed PostgreSQL**
+    - Products catalog, orders, returns, tickets
+    - Automatic backups
+    - Connection pooling
+    - Real-time capabilities
     """)
+    
 
 st.markdown("---")
-
-st.markdown("### 🤖 Application Features")
-
-feat_col1, feat_col2 = st.columns(2)
-
-with feat_col1:
-    st.markdown("""
-    #### Agentic Support System
-    - **GPT-4 Powered Agent**: Intelligent orchestrator
-    - **Tool Architecture**: Extensible function calling
-    - **Available Tools**: Order mgmt, product search, KB retrieval
-    - **RAG System**: Context-aware responses
-    - **Conversation History**: Multi-turn conversations
-    """)
-
-with feat_col2:
-    st.markdown("""
-    #### ML & AI Capabilities
-    - **Custom PyTorch Models**: Image classification
-    - **Text Generation**: GPT-3.5, GPT-4, Custom GPT
-    - **Image Generation**: Stability AI SD3
-    - **Embeddings**: OpenAI for vector search
-    - **Transfer Learning**: ResNet18 fine-tuning
-    """)
-
-st.divider()
-
-# Data flow examples
-st.markdown("### 🔄 Example Data Flows")
-
-with st.expander("📞 Customer Support Query Flow"):
-    st.markdown("""
-    1. **User** sends message via Streamlit UI
-    2. **Agent** (`chatbot/agent.py`) receives message
-    3. **Agent** calls OpenAI with system prompt and available tools
-    4. **OpenAI** decides which tools to call (e.g., `search_products`)
-    5. **Tool Implementation** executes database or vector store query
-    6. **Results** returned to OpenAI for natural language synthesis
-    7. **Agent** returns response to UI with tool usage tracking
-    """)
-
-with st.expander("🖼️ Image Classification Flow"):
-    st.markdown("""
-    1. **User** uploads image via Streamlit UI
-    2. **Image** preprocessed (resize to 224x224, normalize)
-    3. **PyTorch Model** performs inference (ResNet18)
-    4. **Confidence Thresholding** applied (default 60%)
-    5. **Predictions** displayed with probability breakdown
-    """)
-
-with st.expander("🤖 Custom GPT Generation Flow"):
-    st.markdown("""
-    1. **User** configures parameters (seed, temperature, max_tokens)
-    2. **Request** sent to Google Cloud Run API
-    3. **Model** generates text character-by-character
-    4. **Response** streamed back to UI
-    5. **Display** generation time and token information
-    """)
-
-with st.expander("🎨 Text-to-Image Generation Flow"):
-    st.markdown("""
-    1. **User** enters text prompt
-    2. **Request** sent to Stability AI API (SD3 model)
-    3. **Image** generated based on prompt
-    4. **Result** displayed with download option
-    5. **Cached** for performance (using Streamlit caching)
-    """)
-
-st.divider()
-
-# Why Serverless section
-st.markdown("### ☁️ Why This Architecture is Serverless")
-
-serverless_col1, serverless_col2 = st.columns(2)
-
-with serverless_col1:
-    st.markdown("""
-    #### No Server Management
-    - All infrastructure fully managed
-    - No SSH access or server config
-    - Automatic OS updates & security patches
-    - Focus on code, not servers
-    
-    #### Automatic Scaling
-    - **Fly.io**: Scales containers based on traffic
-    - **Supabase**: Connection pooling & read replicas
-    - **Qdrant Cloud**: Managed scaling
-    - **Cloud Run**: Scales to zero when idle
-    """)
-
-with serverless_col2:
-    st.markdown("""
-    #### Pay-per-Use Pricing
-    - Only pay for actual consumption
-    - No cost for idle resources
-    - Predictable pricing
-    - Cost-efficient for variable traffic
-    
-    #### High Availability
-    - Built-in redundancy
-    - Automatic failover
-    - Geographic distribution
-    - 99.9%+ uptime SLAs
-    """)
-
-st.divider()
 
 # Technology stack
 st.markdown("### 🛠️ Technology Stack")
@@ -270,4 +170,3 @@ with tech_col3:
     """)
 
 st.markdown("---")
-st.caption("Built with Streamlit • Powered by OpenAI, PyTorch, and Stability AI")

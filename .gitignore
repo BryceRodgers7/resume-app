@@ -56,7 +56,7 @@ venv.bak/
 # Data files
 data/
 datasets/
-model_tuning/dataset/
+model_tuning/dataset*/
 
 # OS
 .DS_Store

@@ -132,134 +132,133 @@ class ImageDownloader:
         
         return all_urls[:max_images]
     
-    def search_bing(self, query, max_images=100, api_key=None):
-        """
-        Search Bing for images
-        Requires Bing Search API key from Azure
-        """
-        if not api_key:
-            print("\n❌ Bing API key required!")
-            print("\nTo get a Bing Search API key:")
-            print("1. Go to https://portal.azure.com")
-            print("2. Create a 'Bing Search v7' resource (Free tier available)")
-            print("3. Copy one of the API keys")
-            print("4. Set BING_API_KEY environment variable or pass as parameter")
-            return []
+    # def search_bing(self, query, max_images=100, api_key=None):
+    #     """
+    #     Search Bing for images
+    #     Requires Bing Search API key from Azure
+    #     """
+    #     if not api_key:
+    #         print("\n❌ Bing API key required!")
+    #         print("\nTo get a Bing Search API key:")
+    #         print("1. Go to https://portal.azure.com")
+    #         print("2. Create a 'Bing Search v7' resource (Free tier available)")
+    #         print("3. Copy one of the API keys")
+    #         print("4. Set BING_API_KEY environment variable or pass as parameter")
+    #         return []
         
-        print(f"\n🔍 Searching Bing for '{query}'...")
+    #     print(f"\n🔍 Searching Bing for '{query}'...")
         
-        search_url = "https://api.bing.microsoft.com/v7.0/images/search"
-        headers = {"Ocp-Apim-Subscription-Key": api_key}
+    #     search_url = "https://api.bing.microsoft.com/v7.0/images/search"
+    #     headers = {"Ocp-Apim-Subscription-Key": api_key}
         
-        all_urls = []
-        offset = 0
+    #     all_urls = []
+    #     offset = 0
         
-        while len(all_urls) < max_images:
-            params = {
-                "q": query,
-                "count": min(150, max_images - len(all_urls)),
-                "offset": offset,
-                "imageType": "photo",
-                "size": "medium"
-            }
+    #     while len(all_urls) < max_images:
+    #         params = {
+    #             "q": query,
+    #             "count": min(150, max_images - len(all_urls)),
+    #             "offset": offset,
+    #             "imageType": "photo",
+    #             "size": "medium"
+    #         }
             
-            try:
-                response = requests.get(search_url, headers=headers, params=params, timeout=10)
-                response.raise_for_status()
-                data = response.json()
+    #         try:
+    #             response = requests.get(search_url, headers=headers, params=params, timeout=10)
+    #             response.raise_for_status()
+    #             data = response.json()
                 
-                images = data.get("value", [])
-                if not images:
-                    break
+    #             images = data.get("value", [])
+    #             if not images:
+    #                 break
                 
-                for img in images:
-                    all_urls.append(img["contentUrl"])
+    #             for img in images:
+    #                 all_urls.append(img["contentUrl"])
                 
-                print(f"  Found {len(images)} images (total: {len(all_urls)})")
+    #             print(f"  Found {len(images)} images (total: {len(all_urls)})")
                 
-                offset += len(images)
-                time.sleep(1)  # Rate limiting
+    #             offset += len(images)
+    #             time.sleep(1)  # Rate limiting
                 
-            except Exception as e:
-                print(f"  ⚠️  Search error: {str(e)}")
-                break
+    #         except Exception as e:
+    #             print(f"  ⚠️  Search error: {str(e)}")
+    #             break
         
-        return all_urls[:max_images]
+    #     return all_urls[:max_images]
     
-    def search_unsplash(self, query, max_images=100, api_key=None):
-        """
-        Search Unsplash for high-quality images
-        Requires free Unsplash API key from https://unsplash.com/developers
-        """
-        if not api_key:
-            print("\n❌ Unsplash API key required!")
-            print("\nTo get a free Unsplash API key:")
-            print("1. Go to https://unsplash.com/developers")
-            print("2. Register your application (free)")
-            print("3. Copy the Access Key")
-            print("4. Set UNSPLASH_API_KEY environment variable")
-            return []
+    # def search_unsplash(self, query, max_images=100, api_key=None):
+    #     """
+    #     Search Unsplash for high-quality images
+    #     Requires free Unsplash API key from https://unsplash.com/developers
+    #     """
+    #     if not api_key:
+    #         print("\n❌ Unsplash API key required!")
+    #         print("\nTo get a free Unsplash API key:")
+    #         print("1. Go to https://unsplash.com/developers")
+    #         print("2. Register your application (free)")
+    #         print("3. Copy the Access Key")
+    #         print("4. Set UNSPLASH_API_KEY environment variable")
+    #         return []
         
-        print(f"\n🔍 Searching Unsplash for '{query}'...")
+    #     print(f"\n🔍 Searching Unsplash for '{query}'...")
         
-        search_url = "https://api.unsplash.com/search/photos"
-        headers = {"Authorization": f"Client-ID {api_key}"}
+    #     search_url = "https://api.unsplash.com/search/photos"
+    #     headers = {"Authorization": f"Client-ID {api_key}"}
         
-        all_urls = []
-        page = 1
+    #     all_urls = []
+    #     page = 1
         
-        while len(all_urls) < max_images:
-            params = {
-                "query": query,
-                "per_page": 30,
-                "page": page,
-                "orientation": "landscape"
-            }
+    #     while len(all_urls) < max_images:
+    #         params = {
+    #             "query": query,
+    #             "per_page": 30,
+    #             "page": page,
+    #             "orientation": "landscape"
+    #         }
             
-            try:
-                response = requests.get(search_url, headers=headers, params=params, timeout=10)
-                response.raise_for_status()
-                data = response.json()
+    #         try:
+    #             response = requests.get(search_url, headers=headers, params=params, timeout=10)
+    #             response.raise_for_status()
+    #             data = response.json()
                 
-                results = data.get("results", [])
-                if not results:
-                    break
+    #             results = data.get("results", [])
+    #             if not results:
+    #                 break
                 
-                for result in results:
-                    # Use regular size (not raw) for reasonable file sizes
-                    all_urls.append(result["urls"]["regular"])
+    #             for result in results:
+    #                 # Use regular size (not raw) for reasonable file sizes
+    #                 all_urls.append(result["urls"]["regular"])
                 
-                print(f"  Found {len(results)} images (total: {len(all_urls)})")
+    #             print(f"  Found {len(results)} images (total: {len(all_urls)})")
                 
-                page += 1
-                time.sleep(1)  # Rate limiting
+    #             page += 1
+    #             time.sleep(1)  # Rate limiting
                 
-            except Exception as e:
-                print(f"  ⚠️  Search error: {str(e)}")
-                break
+    #         except Exception as e:
+    #             print(f"  ⚠️  Search error: {str(e)}")
+    #             break
         
-        return all_urls[:max_images]
+    #     return all_urls[:max_images]
 
 def download_category_images(category, queries, method='duckduckgo', api_key=None, 
-                             base_dir=None, train_count=100, val_count=25):
+                             base_dir=None, train_pct=80, val_pct=20, images_per_query=100):
     """Download images for a single category using specified method"""
     
     print(f"\n{'='*70}")
     print(f"📥 Downloading {category.upper()} images")
     print(f"{'='*70}")
     
-    total_images_needed = train_count + val_count
-    
     # Create temporary download directory
     temp_dir = base_dir / 'temp' / category
     downloader = ImageDownloader(temp_dir)
     
-    # Step 1: Collect URLs from all queries (search once per query)
-    print(f"\n🔍 Searching for {total_images_needed} images total...")
+    # Step 1: Collect URLs from ALL queries (don't stop early!)
+    print(f"\n🔍 Searching for {images_per_query} images per query ({len(queries)} queries)...")
+    print(f"   Will split into {train_pct}% for training and {val_pct}% for validation")
     all_urls = []
-    images_per_query = total_images_needed // len(queries) + 10  # Get a few extra
     
-    for query in queries:
+    for i, query in enumerate(queries, 1):
+        print(f"\n   Query {i}/{len(queries)}: '{query}'")
         if method == 'duckduckgo':
             urls = downloader.search_duckduckgo(query, images_per_query)
         # elif method == 'bing':
@@ -271,31 +270,30 @@ def download_category_images(category, queries, method='duckduckgo', api_key=Non
             return 0
         
         all_urls.extend(urls)
-        
-        if len(all_urls) >= total_images_needed:
-            break
+        print(f"   → Collected {len(urls)} URLs (total so far: {len(all_urls)})")
     
-    # Step 2: Download all images to temporary directory
-    print(f"\n💾 Downloading {min(len(all_urls), total_images_needed)} images...")
+    print(f"\n📊 Total URLs collected: {len(all_urls)} from {len(queries)} queries")
+    
+    # Step 2: Download ALL images to temporary directory
+    print(f"\n💾 Downloading all {len(all_urls)} images...")
     downloaded_files = []
     
-    for i, url in enumerate(all_urls[:total_images_needed], 1):
+    for i, url in enumerate(all_urls, 1):
         filename = temp_dir / f"{category}_{i:04d}.jpg"
         
-        print(f"  [{i}/{min(len(all_urls), total_images_needed)}] Downloading...", end=' ')
+        if i % 50 == 0:  # Progress update every 50 images
+            print(f"  Progress: {i}/{len(all_urls)} ({100*i/len(all_urls):.1f}%)")
+        
         if downloader.download_image(url, filename):
             downloaded_files.append(filename)
-            print(f"✓ {filename.name}")
-        else:
-            print(f"✗ Failed")
         
         # Rate limiting
         time.sleep(0.5)
     
-    print(f"\n✅ Downloaded {len(downloaded_files)} total images for {category}")
+    print(f"\n✅ Successfully downloaded {len(downloaded_files)} / {len(all_urls)} images for {category}")
     
-    # Step 3: Split downloaded images into train and val sets
-    print(f"\n📊 Splitting images into train ({train_count}) and val ({val_count}) sets...")
+    # Step 3: Sample and split into train and val sets
+    print(f"\n📊 Splitting into {train_pct}% for training and {val_pct}% for validation")
     
     train_dir = base_dir / 'train' / category
     val_dir = base_dir / 'val' / category
@@ -305,16 +303,16 @@ def download_category_images(category, queries, method='duckduckgo', api_key=Non
     # Randomize order before splitting to avoid ordering bias
     random.shuffle(downloaded_files)
     
-    # Split: first train_count images to train, rest to val
-    train_files = downloaded_files[:train_count]
-    val_files = downloaded_files[train_count:train_count + val_count]
+    # Split: first train_pct% images to train, rest to val
+    train_files = downloaded_files[:int(len(downloaded_files) * train_pct / 100)]
+    val_files = downloaded_files[int(len(downloaded_files) * train_pct / 100):]
     
-    # Move train files
+    # Move first train_pct% of images to train set
     for i, src_file in enumerate(train_files, 1):
         dest_file = train_dir / f"{category}_train_{i:04d}.jpg"
         shutil.move(str(src_file), str(dest_file))
     
-    # Move val files
+    # Move remaining images to val set
     for i, src_file in enumerate(val_files, 1):
         dest_file = val_dir / f"{category}_val_{i:04d}.jpg"
         shutil.move(str(src_file), str(dest_file))
@@ -323,10 +321,11 @@ def download_category_images(category, queries, method='duckduckgo', api_key=Non
     if temp_dir.exists():
         shutil.rmtree(temp_dir)
     
-    print(f"  ✓ Moved {len(train_files)} images to train set")
-    print(f"  ✓ Moved {len(val_files)} images to val set")
+    print(f"  ✓ Moved {len(train_files)} images to train set ({train_pct}%)")
+    print(f"  ✓ Moved {len(val_files)} images to val set ({100-train_pct}%)")
+    print(f"  ✓ Total in dataset: {len(train_files) + len(val_files)} images")
     
-    return len(downloaded_files)
+    return len(train_files) + len(val_files)
 
 
 def main():
@@ -341,16 +340,79 @@ def main():
     # Define search queries for each category
     search_queries = {
         'bird': [
-            'bird flying'
+            'bird flying',
+            'crow',
+            'eagle',
+            'parrot',
+            'pidgeon',
+        ],
+        'plane': [
+            'airplane flying',
+            'airplane',
+            'jet plane',
+            'prop plane',
+            'plane landing'
+        ],
+        'superman': [
+            'superman flying',
+            'superman',
+            'superman costume',
+            'superman comic',
+            'superman live-action',
+        ],
+        'other': [
+            'person',
+            'crowd',
+            'portrait',
+            'face',
+            'city',
+            'street',
+            'building',
+            'skyscraper',
+            'bridge',
+            'interior',
+            'room',
+            'kitchen',
+            'office',
+            'furniture',
+            'spaceship',
+            'car',
+            'truck',
+            'train',
+            'helicopter',
+            'boat',
+            'motorcycle',
+            'bicycle',
+            'construction',
+            'pattern',
+            'bulldozer',
+            'tractor',
+            'landscape',
+            'mountain',
+            'forest',
+            'desert',
+            'beach',
+            'ocean',
+            'waterfall',
+            'flowers',
+            'trees',
+            'snow',
+            'rocks',
+            'underwater',
+            'fish',
+            'insects',
+            'reptile',
+            'dog',
+            'cat',
+            'food',
+            'restaurant',
+            'painting',
+            'illustration',
+            'anime',
+            'cartoon',
+            'screenshot',
+            'texture',
         ]
-        # 'plane': [
-        #     'commercial airplane flying',
-        #     'airplane'
-        # ],
-        # 'superman': [
-        #     'superman flying',
-        #     'superman'
-        # ]
     }
     
     # Check command line arguments
@@ -367,11 +429,19 @@ def main():
     print("💡 Tip: For better results, get a free Bing API key")
     
     print(f"\n📁 Dataset directory: {base_dir}")
-    print("\n⚙️  Configuration:")
-    print("   - Training images per category: 100")
-    print("   - Validation images per category: 25")
-    print("   - Total images per category: 125")
-    print("   - Total download: ~375 images")
+    print("\n⚙️  Download Strategy:")
+    print("   1. Search ALL queries and collect URLs")
+    print("   2. Download ALL available images from all queries")
+    print("   3. Randomly sample best images for train/val splits")
+    print("\n📊 Expected Downloads:")
+    print("   Bird/Plane/Superman (each):")
+    print("     - Search: 100 images/query × 5 queries = ~500 images")
+    print("     - Final dataset: 100 train + 25 val = 125 images")
+    print("   Other:")
+    print("     - Search: 10 images/query × 50 queries = ~500 images")
+    print("     - Final dataset: 100 train + 25 val = 125 images")
+    print("\n   📥 Total images to download: ~2000")
+    print("   💾 Final dataset size: 500 images (125 per category)")
     
     response = input("\n▶️  Start downloading? (y/n): ")
     if response.lower() != 'y':
@@ -381,22 +451,30 @@ def main():
     print("\n" + "=" * 70)
     print("🚀 Starting automated download...")
     print("=" * 70)
-    print("\n⏱️  This will take 10-20 minutes depending on your connection...")
-    print("☕ Time to grab a coffee!\n")
+    print("\n⏱️  This will download ~2000 images (could take 30-60 minutes)...")
+    print("☕ Perfect time for a coffee break!\n")
+    print("💡 Progress updates will show every 50 images downloaded\n")
     
     # Download images for each category
     start_time = time.time()
     total_downloaded = 0
     
     for category, queries in search_queries.items():
+        # Set images_per_query based on category
+        if category == 'other':
+            images_per_query = 10  # 10 images per query for 'other'
+        else:
+            images_per_query = 100  # 100 images per query for bird/plane/superman
+        
         downloaded = download_category_images(
             category=category,
             queries=queries,
             method=method,
             api_key=api_key,
             base_dir=base_dir,
-            train_count=100,
-            val_count=25
+            train_pct=80,
+            val_pct=20,
+            images_per_query=images_per_query
         )
         total_downloaded += downloaded
     

@@ -57,10 +57,9 @@ with st.expander("🔧 Technical Architecture", expanded=False):
 with st.expander("💡 Try it Out", expanded=False):
     st.markdown("""
     **Example Contexts:**
-    - "Once upon a time in a distant galaxy"
-    - "In the year 2372, voyager encounters an undiscovered wormhole"
+    - "Voyager encounters an undiscovered wormhole"
     - "PARIS: Warp engines are offline!"
-    - "Captain's log, stardate"51390.4"
+    - "JANEYWAY: Captain's log, stardate 51390.4"
     
     **Tips:**
     - **Lower temperature (0.3-0.7)**: More coherent, focused text
@@ -69,7 +68,7 @@ with st.expander("💡 Try it Out", expanded=False):
     - **Append feature**: Build longer narratives by generating iteratively
     """)
 
-st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). The API wakes up on first request (~10-30 second cold start to load the model). Generation may take 30 seconds or more.")
+st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). The API wakes up on first request (~5-10 second cold start). Generation may take 30 seconds or more.")
 
 st.divider()
 
@@ -188,6 +187,9 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                 "context": context_value
             }
             
+            # Log the request for debugging
+            logger.info(f"Making API request with seed={seed}, temperature={temperature}, max_tokens={max_tokens}, context_length={len(context_value) if context_value else 0}")
+            
             response = requests.post(
                 f"{API_URL}/generate",
                 json=payload,
@@ -199,6 +201,10 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                 
                 # Check if response contains the expected "text" field
                 if "text" in result:
+                    # Log successful generation
+                    text_preview = result["text"][:50] + "..." if len(result["text"]) > 50 else result["text"]
+                    logger.info(f"Successfully generated text (preview): {text_preview}")
+                    
                     # Store results in session state
                     st.session_state.show_results = True
                     st.session_state.result_data = {

@@ -22,91 +22,127 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
-st.markdown("""
-    <style>
-    .main {
-        padding: 2rem;
-    }
-    .stButton>button {
-        width: 100%;
-    }
-    .big-font {
-        font-size: 24px !important;
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Sidebar
-st.sidebar.title("🤖 AI Portfolio")
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔗 Links")
-st.sidebar.markdown("[GitHub](https://github.com/BryceRodgers7)")
-st.sidebar.markdown("[Business Website] Coming Soon!")
-st.sidebar.markdown("[LinkedIn](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
-
-# Main content
-st.title("Welcome to My AI Portfolio 🤖")
-
-st.markdown("""
-## About Me
-
-Welcome! I'm an AI/ML practitioner passionate about building intelligent systems. 
-This portfolio showcases several projects I've developed over the past couple of years.
-
----
-""")
-
-# Create columns for better layout
-col1, col2 = st.columns(2)
-
-with col1:
+def home_page():
+    """Home page content"""
+    # Custom CSS for better styling
     st.markdown("""
-    ### 🎯 What You'll Find Here
-    
-    - **Customer Support Chatbot**: An agentic customer support system with intelligent routing
-    - **Custom GPT Model**: A 11-million parameter GPT model I trained from scratch
-    - **Text-to-Image Generator**: Create images from text using Stability AI
-    - **Image Classifier**: A custom-trained image classification model
-    - **Simple Chatbot**: Interactive chatbot with customizable system prompts
+        <style>
+        .main {
+            padding: 2rem;
+        }
+        .stButton>button {
+            width: 100%;
+        }
+        .big-font {
+            font-size: 24px !important;
+            font-weight: bold;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Sidebar
+    st.sidebar.title("🤖 AI Portfolio")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔗 Links")
+    st.sidebar.markdown("[GitHub](https://github.com/BryceRodgers7)")
+    st.sidebar.markdown("[Business Website] Coming Soon!")
+    st.sidebar.markdown("[LinkedIn](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
+
+    # Main content
+    st.title("Welcome to My AI Portfolio 🤖")
+
+    st.markdown("""
+    ## About Me
+
+    Welcome! I'm a senior software engineer with a passion for AI/ML, serverless architectures, backend systems, 
+    trading, an MBA and a US Patent to top it all off. 
+    This portfolio showcases several AI/ML projects I've developed that demonstrate full-stack capabilities, 
+    from user-facing applications and backend services to cloud deployment, data architecture, and machine learning systems.
+    ---
     """)
 
-with col2:
+    # Create columns for better layout
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        ### 🎯 What You'll Find Here
+        
+        - **Customer Support Chatbot**: An agentic customer support system with intelligent routing
+        - **Image Classifier**: A custom-trained image classification model
+        - **Simple Chatbot**: Interactive chatbot with a customizable system prompt
+        - **Text-to-Image Generator**: Create images from text using Stability AI
+        - **Custom GPT Model**: A 11-million parameter GPT model I trained from scratch
+        - **Architecture**: A serverless architecture diagram for this application
+        - **About Me**: A page about me and my background
+        
+        """)
+
+    with col2:
+        st.markdown("### 🔧 Technologies Used")
+        tech_col1, tech_col2 = st.columns(2)
+        
+        with tech_col1:
+            st.markdown("""
+            - Python 
+            - Streamlit
+            - Docker
+            - PostgreSQL
+            - Qdrant
+            - Google Cloud Run
+            """)
+        
+        with tech_col2:
+            st.markdown("""
+            - PyTorch
+            - Transformers
+            - Stability AI API
+            - OpenAI API
+            - Fly.io
+            - Custom ML Models
+            """)
+
+    st.markdown("---")
+
     st.markdown("""
-    ### 🔧 Technologies Used
-    
-    - Python & Streamlit
-    - PyTorch & TensorFlow
-    - Transformers
-    - Stability AI API
-    - OpenAI API
-    - Custom ML Models
+    ### 🌐 Connect With Me
+
+    Feel free to explore the demos using the navigation on the left. You can also find me at:
     """)
 
-st.markdown("---")
+    # Create buttons for links
+    col1, col2, col3 = st.columns(3)
 
-st.markdown("""
-### 🌐 Connect With Me
+    with col1:
+        if st.button("📁 View My GitHub", use_container_width=True):
+            st.markdown("[GitHub Profile](https://github.com/BryceRodgers7)")
 
-Feel free to explore the demos using the navigation on the left. You can also find me at:
-""")
+    with col2:
+        if st.button("💼 My Business", use_container_width=True):
+            st.info("Coming Soon!")
 
-# Create buttons for links
-col1, col2, col3 = st.columns(3)
+    with col3:
+        if st.button("💻 LinkedIn", use_container_width=True):
+            st.markdown("[LinkedIn Profile](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
 
-with col1:
-    if st.button("📁 View My GitHub", use_container_width=True):
-        st.markdown("[GitHub Profile](https://github.com/BryceRodgers7)")
+    st.markdown("---")
 
-with col2:
-    if st.button("💼 My Business", use_container_width=True):
-        st.info("Coming Soon!")
+    st.info("👈 Use the sidebar to navigate between different projects and demos!")
 
-with col3:
-    if st.button("💻 LinkedIn", use_container_width=True):
-        st.markdown("[LinkedIn Profile](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
 
-st.markdown("---")
+# Configure navigation with custom labels
+pages = {
+    "": [
+        st.Page(home_page, title="Home", icon="🏠", default=True),
+        st.Page("pages/support_agent.py", title="Support Agent", icon="💬"),
+        st.Page("pages/image_classifier.py", title="Image Classifier", icon="🖼️"),
+        st.Page("pages/pirate_chatbot.py", title="Pirate Chatbot", icon="🏴‍☠️"),
+        st.Page("pages/stability.py", title="Stability", icon="🎨"),
+        st.Page("pages/voyager_gpt.py", title="Voyager GPT", icon="🚀"),
+        st.Page("pages/architecture.py", title="Architecture", icon="🏗️"),
+        st.Page("pages/about_me.py", title="About Me", icon="👤"),
+    ],
+}
 
-st.info("👈 Use the sidebar to navigate between different projects and demos!")
+pg = st.navigation(pages)
+pg.run()

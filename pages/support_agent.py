@@ -183,7 +183,7 @@ initialize_session_state()
 st.title("💬 Agentic Customer Support System")
 
 st.markdown("""
-### Sophisticated AI Agent with Tool Calling & RAG
+### AI Customer Support Agent with Tool Calling & RAG
 
 This is a **fully functional customer support agent** for "Protis," a fictional e-commerce store. The system demonstrates 
 enterprise-grade agentic AI architecture with autonomous tool usage, database integration, and knowledge base retrieval.
@@ -242,7 +242,10 @@ with st.expander("💡 Try These Interactions", expanded=False):
     **Tip:** View the backend data for reference and see it change due to the agent's actions!
     """)
 
-st.info("📊 **Behind the Scenes**: Click the 'Tools Used' expander within the responses to see the full execution details. Watch the sidebar to see how many tool calls total the agent has used.")
+st.info("""📊 **Behind the Scenes**: Click the 'Tools Used' expander within the responses to see the full execution details. 
+        Watch the sidebar to see how many tool calls total the agent has used. 
+        View the backend data for reference and see it change due to the agent's actions!
+        """)
 
 st.caption("Powered by OpenAI GPT-4 with function calling | PostgreSQL (Supabase) | Qdrant Vector Database")
 

@@ -2,18 +2,37 @@
 Image Classifier Training Script
 Trains a model to classify images as: bird, plane, superman, or other
 
+TWO-PHASE TRAINING STRATEGY:
+Phase 1 (10 epochs): Warm-up - Train classification head only (backbone frozen)
+Phase 2 (30 epochs): Fine-tune - Unfreeze layer4 + head with lower learning rate
+
+This progressive unfreezing approach:
+- Prevents catastrophic forgetting of pretrained features
+- Allows the head to learn good representations first
+- Then fine-tunes deeper layers for task-specific features
+- Results in better accuracy and generalization
+
 Dataset Structure Expected:
 model_tuning/dataset/
     ├── train/
     │   ├── bird/
     │   ├── plane/
-    │   └── superman/
+    │   ├── superman/
+    │   └── other/       # Add diverse images that are NOT birds/planes/superman
     └── val/
         ├── bird/
         ├── plane/
-        └── superman/
+        ├── superman/
+        └── other/       # Add diverse images for validation
 
-Note: No "other" class needed! Images with low confidence will be classified as "other" automatically.
+The "other" class should contain diverse images like:
+- Common objects (cars, furniture, food)
+- People doing various activities
+- Landscapes and buildings
+- Animals that aren't birds
+- Abstract patterns and textures
+
+This helps the model learn to distinguish out-of-distribution images more reliably.
 
 Usage:
     python train_classifier.py
@@ -33,12 +52,15 @@ from datetime import datetime
 CONFIG = {
     'data_dir': Path(__file__).parent / 'dataset',
     'model_save_dir': Path(__file__).parent.parent / 'models',
-    'num_epochs': 10,
+    # Two-phase training strategy
+    'phase1_epochs': 10,      # Warm-up: train head only
+    'phase2_epochs': 30,      # Fine-tune: train head + layer4
     'batch_size': 32,
-    'learning_rate': 0.001,
-    'num_classes': 3,  # Only bird, plane, superman
-    'class_names': ['bird', 'plane', 'superman'],
-    'confidence_threshold': 0.6,  # Below this = "other"
+    'phase1_lr': 0.001,       # Higher LR for training head from scratch
+    'phase2_lr': 0.0001,      # Lower LR for fine-tuning
+    'num_classes': 4,  # bird, plane, superman, other
+    'class_names': ['bird', 'other', 'plane', 'superman'],  # Alphabetical order (how ImageFolder loads them)
+    'entropy_threshold': 0.7,  # High entropy (0-1) indicates uncertainty -> classify as "other"
     'img_size': 224,
     'device': 'cuda' if torch.cuda.is_available() else 'cpu'
 }
@@ -77,11 +99,11 @@ def create_model(num_classes):
     """Create a ResNet18 model with custom final layer"""
     model = models.resnet18(pretrained=True)
     
-    # Freeze early layers (optional - comment out to fine-tune all layers)
+    # Freeze all layers initially (will be unfrozen in phase 2)
     for param in model.parameters():
         param.requires_grad = False
     
-    # Replace final layer
+    # Replace final layer with custom head
     num_ftrs = model.fc.in_features
     model.fc = nn.Sequential(
         nn.Linear(num_ftrs, 512),
@@ -91,6 +113,21 @@ def create_model(num_classes):
     )
     
     return model
+
+def unfreeze_layer4(model):
+    """Unfreeze the last ResNet block (layer4) for fine-tuning"""
+    print("\n🔓 Unfreezing layer4 for fine-tuning...")
+    for param in model.layer4.parameters():
+        param.requires_grad = True
+    
+    # Count trainable parameters
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    print(f"   Trainable parameters: {trainable:,} / {total:,} ({100*trainable/total:.1f}%)")
+
+def get_trainable_params(model):
+    """Get list of trainable parameters"""
+    return [p for p in model.parameters() if p.requires_grad]
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs, device):
     """Train the model"""
@@ -177,9 +214,14 @@ def save_model(model, history, config):
     metadata = {
         'class_names': config['class_names'],
         'num_classes': config['num_classes'],
-        'confidence_threshold': config['confidence_threshold'],
+        'entropy_threshold': config['entropy_threshold'],
         'img_size': config['img_size'],
         'model_architecture': 'resnet18',
+        'training_strategy': 'two_phase',
+        'phase1_epochs': config['phase1_epochs'],
+        'phase2_epochs': config['phase2_epochs'],
+        'phase1_lr': config['phase1_lr'],
+        'phase2_lr': config['phase2_lr'],
         'timestamp': timestamp,
         'training_history': history
     }
@@ -206,13 +248,18 @@ def main():
         print("    ├── train/")
         print("    │   ├── bird/")
         print("    │   ├── plane/")
-        print("    │   └── superman/")
+        print("    │   ├── superman/")
+        print("    │   └── other/      # Diverse images NOT in the above categories")
         print("    └── val/")
         print("        ├── bird/")
         print("        ├── plane/")
-        print("        └── superman/")
-        print("\nNote: No 'other' class needed!")
-        print("Images with low confidence will be automatically classified as 'other'.")
+        print("        ├── superman/")
+        print("        └── other/      # Diverse images for validation")
+        print("\n💡 TIP: The 'other' class should contain diverse images like:")
+        print("   - Common objects (cars, furniture, food)")
+        print("   - People, landscapes, buildings")
+        print("   - Animals that aren't birds")
+        print("   - Abstract patterns")
         print("\nAdd images to each folder and run again.")
         return
     
@@ -244,20 +291,78 @@ def main():
     model = create_model(CONFIG['num_classes'])
     model = model.to(CONFIG['device'])
     
-    # Loss function and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
+    # Count initial trainable parameters (only head)
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    print(f"   Trainable parameters: {trainable:,} / {total:,} ({100*trainable/total:.1f}%)")
     
-    # Train the model
-    model, history = train_model(
-        model, dataloaders, criterion, optimizer, 
-        CONFIG['num_epochs'], CONFIG['device']
+    # Loss function
+    criterion = nn.CrossEntropyLoss()
+    
+    # ============================================================================
+    # PHASE 1: Warm-up - Train head only with higher learning rate
+    # ============================================================================
+    print("\n" + "=" * 70)
+    print("🔥 PHASE 1: WARM-UP - Training classification head only")
+    print("=" * 70)
+    print(f"   Epochs: {CONFIG['phase1_epochs']}")
+    print(f"   Learning rate: {CONFIG['phase1_lr']}")
+    print(f"   Frozen: All backbone layers (conv1, layer1-4)")
+    print(f"   Trainable: Classification head only")
+    
+    # Create optimizer for phase 1 (only trainable params)
+    optimizer_phase1 = optim.Adam(get_trainable_params(model), lr=CONFIG['phase1_lr'])
+    
+    # Train phase 1
+    model, history_phase1 = train_model(
+        model, dataloaders, criterion, optimizer_phase1, 
+        CONFIG['phase1_epochs'], CONFIG['device']
     )
+    
+    # ============================================================================
+    # PHASE 2: Fine-tune - Unfreeze layer4 + head with lower learning rate
+    # ============================================================================
+    print("\n" + "=" * 70)
+    print("🎯 PHASE 2: FINE-TUNING - Unfreezing layer4 + head")
+    print("=" * 70)
+    print(f"   Epochs: {CONFIG['phase2_epochs']}")
+    print(f"   Learning rate: {CONFIG['phase2_lr']} (10x lower)")
+    print(f"   Frozen: conv1, layer1-3")
+    print(f"   Trainable: layer4 + classification head")
+    
+    # Unfreeze layer4
+    unfreeze_layer4(model)
+    
+    # Create new optimizer for phase 2 with lower learning rate
+    optimizer_phase2 = optim.Adam(get_trainable_params(model), lr=CONFIG['phase2_lr'])
+    
+    # Train phase 2
+    model, history_phase2 = train_model(
+        model, dataloaders, criterion, optimizer_phase2, 
+        CONFIG['phase2_epochs'], CONFIG['device']
+    )
+    
+    # Combine training histories
+    history = {
+        'phase1': history_phase1,
+        'phase2': history_phase2,
+        'train_loss': history_phase1['train_loss'] + history_phase2['train_loss'],
+        'train_acc': history_phase1['train_acc'] + history_phase2['train_acc'],
+        'val_loss': history_phase1['val_loss'] + history_phase2['val_loss'],
+        'val_acc': history_phase1['val_acc'] + history_phase2['val_acc'],
+    }
     
     # Save the model
     save_model(model, history, CONFIG)
     
-    print("\n✅ Training complete!")
+    print("\n" + "=" * 70)
+    print("✅ TWO-PHASE TRAINING COMPLETE!")
+    print("=" * 70)
+    print(f"   Phase 1 (head only): {CONFIG['phase1_epochs']} epochs")
+    print(f"   Phase 2 (layer4 + head): {CONFIG['phase2_epochs']} epochs")
+    print(f"   Total epochs: {CONFIG['phase1_epochs'] + CONFIG['phase2_epochs']}")
+    print(f"   Best validation accuracy: {max(history['val_acc']):.4f}")
+    print("=" * 70)
 
 if __name__ == '__main__':
     main()
