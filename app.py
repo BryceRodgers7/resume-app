@@ -53,8 +53,8 @@ def home_page():
 
     st.markdown("""
     <p style="font-size: 16px;">
-    I'm a senior software engineer with a passion for AI/ML, serverless architectures, backend systems, 
-    trading, an MBA and a US Patent to top it all off. 
+    I'm a senior software engineer with a passion for AI/ML, serverless architectures, backend systems, and 
+    stock/cryptotrading, with an MBA and a US Patent to top it all off. 
     This portfolio showcases several AI/ML projects I've developed that demonstrate full-stack capabilities, 
     from user-facing applications and backend services to cloud deployment, data architecture, and machine learning systems.
     </p>
