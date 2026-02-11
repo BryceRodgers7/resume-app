@@ -198,17 +198,12 @@ def predict(model, image_tensor, class_names, entropy_threshold):
         
     return predicted_class, confidence_score, all_probs, normalized_entropy, detection_reason
 
-# Load model
-model, class_names, entropy_threshold, model_loaded = load_model()
-
 # Sidebar - Model Status
 with st.sidebar:
     st.subheader("🔌 Model Status")
-    if model_loaded:
-        st.success("✅ Model loaded successfully!")
-    else:
-        st.error("❌ Model not found")
-        st.caption("[View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)")
+    st.info("💤 Model will load when you classify an image")
+    st.caption("🚀 Lazy loading saves memory!")
+    st.caption("[View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)")
 
 # File uploader
 uploaded_file = st.file_uploader(
@@ -230,7 +225,15 @@ if uploaded_file:
         st.markdown("### 🔍 Classification")
         
         if st.button("Classify Image", type="primary", use_container_width=True):
-            with st.spinner("Analyzing image..."):
+            with st.spinner("Loading model and analyzing image..."):
+                # Load model (lazy loading - only when button is clicked)
+                model, class_names, entropy_threshold, model_loaded = load_model()
+                
+                if not model_loaded:
+                    st.error("❌ Model file not found. Cannot perform classification.")
+                    st.caption("[View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)")
+                    st.stop()
+                
                 # Preprocess and predict
                 img_tensor = preprocess_image(image)
                 predicted_class, confidence, all_probs, entropy, detection_reason = predict(

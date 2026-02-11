@@ -30,6 +30,7 @@ class VectorStore:
         if not self.url or not self.api_key:
             print("Warning: Qdrant URL or API key not configured. Vector search won't work.")
             self.client = None
+            self.embedder = None
         else:
             try:
                 self.client = QdrantClient(
@@ -37,10 +38,12 @@ class VectorStore:
                     api_key=self.api_key,
                 )
                 self._initialize_collection()
-                self.embedder = TextEmbedding(model_name="BAAI/bge-small-en-v1.5") # fast + good demo choice
+                # Lazy load embedder - only initialize when first search happens
+                self.embedder = None
             except Exception as e:
                 print(f"Error connecting to Qdrant: {e}")
                 self.client = None
+                self.embedder = None
     
     def _initialize_collection(self):
         """Initialize collection if it doesn't exist."""
@@ -115,8 +118,10 @@ class VectorStore:
             raise Exception("Qdrant client not initialized. Cannot search by text.")
         
         try:
-            # Initialize OpenAI client
-            openai_client = OpenAI()
+            # Lazy load embedder on first search (saves ~130MB of memory at startup)
+            if self.embedder is None:
+                print("Lazy loading FastEmbed model (first search)...")
+                self.embedder = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
             
             # Generate embeddings for the query text
             query_vector = next(self.embedder.embed([query_text]))
