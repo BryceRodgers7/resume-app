@@ -15,13 +15,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.title("🧠 VoyagerGPT: Custom-Trained Language Model")
+st.title("🧠 Custom-Trained Language Models")
 
 st.markdown("""
-### 10-Million Parameter GPT Model Trained from Scratch
+### 10-Million Parameter GPT Models Trained from Scratch
 
-This is a **custom-built GPT (Generative Pre-trained Transformer)** with 10 million parameters that I built and trained from scratch. 
-It demonstrates understanding of transformer architecture, model training pipelines, and cloud deployment of ML inference services.
+These are **custom-built GPT (Generative Pre-trained Transformer)** models with 10 million parameters that I wrote myself using PyTorch.\n
+Choose between **Shakespeare** (trained on Shakespeare's works) or **Voyager** (trained on Star Trek Voyager scripts).
+This demonstrates understanding of transformer architecture, model training pipelines, and cloud deployment of multiple ML models.
 """)
 
 with st.expander("🎯 What This Demonstrates", expanded=False):
@@ -32,9 +33,8 @@ with st.expander("🎯 What This Demonstrates", expanded=False):
       - Attention mechanisms and positional encoding
       - Loss calculation and optimization
       - Hyperparameter tuning
-    - **MLOps & Deployment**: Model deployed as a REST API on Google Cloud Run with containerization
-    - **Character-Level Generation**: Model generates text character-by-character for fine-grained control
-    - **API Design**: RESTful endpoints for text generation and vocabulary inspection
+    - **MLOps & Deployment**: Models deployed as a REST API on Google Cloud Run with containerization
+    - **Character-Level Generation**: Models generate text character-by-character
     - **Cloud Infrastructure**: Serverless deployment with automatic scaling and cost optimization
     """)
 
@@ -56,35 +56,40 @@ with st.expander("🔧 Technical Architecture", expanded=False):
 
 with st.expander("💡 Try it Out", expanded=False):
     st.markdown("""
-    **Example Contexts:**
-    - Voyager encounters an undiscovered wormhole
+    **Example Contexts (Voyager Model):**
     - PARIS: Warp engines are offline!
     - JANEYWAY: Captain's log, stardate 51390.4
+    
+    **Example Contexts (Shakespeare Model):**
+    - To be or not to be
+    - Once upon a midnight dreary
     
     **Tips:**
     - **Lower temperature (0.3-0.7)**: More coherent, focused text
     - **Higher temperature (1.0-2.0)**: More creative, random text
     - **Same seed + parameters**: Reproducible output for testing
-    - **Append feature**: Build longer narratives by generating iteratively
+    - **Continuous generation**: Generated text is automatically appended to build longer narratives
     """)
 
-st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). The API wakes up on first request (~5-10 second cold start). Generation may take 30 seconds or more.")
+st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). Use the 'Check API Status' button in the sidebar to verify the connection. Generation may take 5-10 seconds depending on context size and max tokens.")
 
 st.divider()
 
 # Configuration
 API_URL = os.getenv("BRYCEGPT_API_URL", "http://localhost:8080")
 
-# Check API health on page load (once per session)
+# Initialize API health check state
 if "api_health_checked" not in st.session_state:
     st.session_state.api_health_checked = False
-    st.session_state.api_healthy = False
-    st.session_state.api_status_message = ""
+    st.session_state.api_healthy = None  # None = not checked yet
+    st.session_state.api_status_message = "⏳ API status not checked yet"
 
-if not st.session_state.api_health_checked:
+# Function to check API health (called only when needed)
+def check_api_health():
+    """Check API health - called on-demand rather than blocking page load."""
     try:
-        # Use longer timeout for cold starts (Cloud Run may need time to wake up)
-        response = requests.get(f"{API_URL}/health", timeout=30)
+        # Use shorter timeout to avoid blocking
+        response = requests.get(f"{API_URL}/health", timeout=10)
         if response.status_code == 200:
             st.session_state.api_healthy = True
             st.session_state.api_status_message = "✅ API is connected and ready!"
@@ -93,7 +98,7 @@ if not st.session_state.api_health_checked:
             st.session_state.api_status_message = f"❌ API returned status {response.status_code}"
     except requests.exceptions.Timeout:
         st.session_state.api_healthy = False
-        st.session_state.api_status_message = "⏱️ API health check timed out (cold start may need more time). Try refreshing."
+        st.session_state.api_status_message = "⏱️ API health check timed out (may need cold start time)"
     except Exception as e:
         st.session_state.api_healthy = False
         st.session_state.api_status_message = f"❌ Could not connect to API: {str(e)}"
@@ -103,7 +108,17 @@ if not st.session_state.api_health_checked:
 with st.sidebar:
     # API Status
     st.subheader("🔌 API Status")
-    if st.session_state.api_healthy:
+    
+    # Check API health button
+    if st.button("🔄 Check API Status", use_container_width=True):
+        with st.spinner("Checking API..."):
+            check_api_health()
+        st.rerun()
+    
+    if st.session_state.api_healthy is None:
+        st.info(st.session_state.api_status_message)
+        st.caption("Click 'Check API Status' to verify connection")
+    elif st.session_state.api_healthy:
         st.success(st.session_state.api_status_message)
     else:
         st.error(st.session_state.api_status_message)
@@ -112,11 +127,18 @@ with st.sidebar:
     # Generation parameters
     st.subheader("🎛️ Generation Parameters")
     
+    model = st.selectbox(
+        "Model",
+        options=["shakespeare", "voyager"],
+        index=0,
+        help="Choose which model to use for text generation"
+    )
+    
     seed = st.number_input(
         "Seed",
         min_value=0,
         max_value=999999,
-        value=1337,
+        value=42,
         help="Random seed for reproducibility"
     )
     
@@ -140,25 +162,32 @@ with st.sidebar:
 
 # Context parameter on main page
 st.markdown("### 📝 Context (Optional)")
-st.markdown("Provide starting text to guide the model's generation. Generated text can be appended to build a running episode script.")
+st.markdown("Provide starting text to guide the model's generation. Generated text will be automatically appended to continue building your story.")
 
 # Initialize context in session state if not exists
-if "context_input" not in st.session_state:
-    st.session_state.context_input = ""
+if "context_text" not in st.session_state:
+    st.session_state.context_text = ""
 
-if "generated_text" not in st.session_state:
-    st.session_state.generated_text = ""
+# Initialize generating state
+if "is_generating" not in st.session_state:
+    st.session_state.is_generating = False
 
-# Don't use value parameter when using key - it's controlled by session state
+# Text area is disabled during generation
+# Use value parameter instead of key to allow programmatic updates
 context_input = st.text_area(
     "Starting text",
-    height=200,
+    value=st.session_state.context_text,
+    height=300,
     help="Optional context for text generation (leave empty for none)",
-    placeholder="Once upon a time in a distant galaxy...",
-    key="context_input"
+    placeholder="Enter your starting text here...",
+    disabled=st.session_state.is_generating
 )
 
-st.caption("💡 Try: 'Once upon a time' or 'In the year 2372, voyager encounters'")
+# Update session state with current value (unless generating)
+if not st.session_state.is_generating:
+    st.session_state.context_text = context_input
+
+st.caption("💡 Try: 'To be or not to be' (Shakespeare) | 'Shields down, warp engines are offline' (Voyager)")
 
 # Initialize session state for results
 if "show_results" not in st.session_state:
@@ -167,28 +196,51 @@ if "result_data" not in st.session_state:
     st.session_state.result_data = None
 
 # Main interface - Generate button
-if st.button("🚀 Generate Text", type="primary", use_container_width=True):
+if st.button("🚀 Generate Text", type="primary", use_container_width=True, disabled=st.session_state.is_generating):
+    # Capture the current context before setting generating state
+    current_context = st.session_state.context_text
+    
+    # Set generating state and rerun to update UI immediately
+    st.session_state.is_generating = True
+    st.rerun()
+
+# If we're generating, run the generation process
+if st.session_state.is_generating:
+    # Get the context that was saved when button was clicked
+    current_context = st.session_state.context_text
+    
+    # Clear previous results
+    st.session_state.show_results = False
+    st.session_state.result_data = None
+    
+    # Check API health on first generate if not checked yet
+    if st.session_state.api_healthy is None:
+        with st.spinner("Checking API connection..."):
+            check_api_health()
+    
     if not st.session_state.api_healthy:
-        st.error("⚠️ API is not available. Please check the connection status in the sidebar.")
+        st.session_state.is_generating = False
+        st.error("⚠️ API is not available. Please check the connection using the 'Check API Status' button in the sidebar.")
         st.stop()
     
     with st.spinner("Generating text..."):
         try:
             # Make API request
             context_value = None
-            if context_input.strip():
+            if current_context.strip():
                 # Convert context to array of characters or tokens
-                context_value = list(context_input.strip())
+                context_value = list(current_context.strip())
             
             payload = {
                 "seed": int(seed),
                 "temperature": float(temperature),
                 "max_tokens": int(max_tokens),
-                "context": context_value
+                "context": context_value,
+                "model": model
             }
             
             # Log the request for debugging
-            logger.info(f"Making API request with seed={seed}, temperature={temperature}, max_tokens={max_tokens}, context_length={len(context_value) if context_value else 0}")
+            logger.info(f"Making API request with model={model}, seed={seed}, temperature={temperature}, max_tokens={max_tokens}, context_length={len(context_value) if context_value else 0}")
             
             response = requests.post(
                 f"{API_URL}/generate",
@@ -204,16 +256,28 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                     # Log successful generation
                     text_preview = result["text"][:50] + "..." if len(result["text"]) > 50 else result["text"]
                     logger.info(f"Successfully generated text (preview): {text_preview}")
+                    logger.info(f"Current context length: {len(current_context)}, API response length: {len(result['text'])}, max_tokens: {max_tokens}")
                     
-                    # Store results in session state
+                    # Extract only the last max_tokens characters (the newly generated portion)
+                    # The API returns context + generated text, so the last portion is new
+                    generated_only = result["text"][-max_tokens:] if len(result["text"]) >= max_tokens else result["text"]
+                    logger.info(f"Extracted last {len(generated_only)} characters as newly generated text")
+                    
+                    # Update context with the new generated text
+                    st.session_state.context_text = current_context + generated_only
+                    
+                    # Store results in session state for details display
                     st.session_state.show_results = True
                     st.session_state.result_data = {
-                        "text": result["text"],
+                        "text": generated_only,  # Store only the newly generated portion
                         "generation_time": result.get("generation_time"),
                         "tokens": result.get("tokens"),
                         "payload": payload,
                         "success": True
                     }
+                    
+                    # Clear generating state
+                    st.session_state.is_generating = False
                     st.rerun()
                 else:
                     st.session_state.show_results = True
@@ -223,9 +287,11 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                         "full_response": result,
                         "payload": payload
                     }
+                    st.session_state.is_generating = False
                     st.rerun()
             elif response.status_code == 422:
                 # Validation error
+                st.session_state.is_generating = False
                 try:
                     error_detail = response.json()
                     logger.error(f"Validation error (422): {error_detail}")
@@ -236,6 +302,7 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                     st.error("⚠️ Validation Error: Invalid parameters provided")
             else:
                 # Log full error details for debugging
+                st.session_state.is_generating = False
                 try:
                     error_response = response.json()
                     logger.error(f"API Error {response.status_code}:")
@@ -251,12 +318,15 @@ if st.button("🚀 Generate Text", type="primary", use_container_width=True):
                 st.error(f"API Error ({response.status_code}): {error_msg}")
                 
         except requests.exceptions.Timeout:
+            st.session_state.is_generating = False
             logger.error("Request timed out")
             st.error("⏱️ Request timed out. The model might be taking too long to generate.")
         except requests.exceptions.ConnectionError as e:
+            st.session_state.is_generating = False
             logger.error(f"Connection error: {str(e)}")
             st.error("🔌 Could not connect to API. Make sure the Cloud Run service is deployed and the URL is correct.")
         except Exception as e:
+            st.session_state.is_generating = False
             logger.error(f"Unexpected error: {str(e)}", exc_info=True)
             st.error(f"❌ Error: {str(e)}")
 
@@ -265,35 +335,7 @@ if st.session_state.show_results and st.session_state.result_data:
     result_data = st.session_state.result_data
     
     if result_data.get("success"):
-        st.success("✅ Generation complete!")
-        
-        # Display generated text
-        st.markdown("### 📝 Generated Text")
-        # Don't use a key - let Streamlit handle the widget naturally
-        st.text_area(
-            "Output",
-            value=result_data["text"],
-            height=300,
-            disabled=True,
-            label_visibility="collapsed"
-        )
-        
-        # Callback function for append button
-        def append_to_context():
-            st.session_state.context_input = st.session_state.context_input + result_data["text"]
-        
-        # Append to context button
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            st.button(
-                "➕ Append to Context", 
-                use_container_width=True, 
-                help="Add this generated text to the context above for continued generation",
-                on_click=append_to_context
-            )
-        
-        with col2:
-            st.caption("💡 Click to add this text to your context for continued generation")
+        st.success("✅ Generation complete! Text has been appended to the context above.")
         
         # Display generation details
         with st.expander("ℹ️ Generation Details"):
@@ -303,6 +345,8 @@ if st.session_state.show_results and st.session_state.result_data:
             if result_data.get("tokens"):
                 details["Number of Tokens"] = len(result_data["tokens"])
                 details["Tokens"] = result_data["tokens"]
+            if result_data.get("text"):
+                details["Generated Text Length"] = len(result_data["text"])
             details["Request Parameters"] = result_data["payload"]
             st.json(details)
     else:
@@ -321,8 +365,13 @@ st.markdown("---")
 st.markdown("### 📖 Model Vocabulary")
 
 if st.button("🔤 Load Vocabulary", use_container_width=True):
+    # Check API health first if not checked yet
+    if st.session_state.api_healthy is None:
+        with st.spinner("Checking API connection..."):
+            check_api_health()
+    
     if not st.session_state.api_healthy:
-        st.error("⚠️ API is not available. Please check the connection status in the sidebar.")
+        st.error("⚠️ API is not available. Please check the connection using the 'Check API Status' button in the sidebar.")
     else:
         with st.spinner("Loading vocabulary..."):
             try:

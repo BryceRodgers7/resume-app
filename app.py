@@ -49,14 +49,15 @@ def home_page():
     st.sidebar.markdown("[LinkedIn](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
 
     # Main content
-    st.title("Welcome to My AI Portfolio 🤖")
+    st.title("Welcome to Bryce Rodgers AI Portfolio 🤖")
 
     st.markdown("""
     <p style="font-size: 16px;">
-    I'm a senior software engineer with a passion for AI/ML, serverless architectures, backend systems, and 
-    stock/cryptotrading, with an MBA and a US Patent to top it all off. 
-    This portfolio showcases several AI/ML projects I've developed that demonstrate full-stack capabilities, 
-    from user-facing applications and backend services to cloud deployment, data architecture, and machine learning systems.
+    I'm a senior software engineer with a passion for Machine Learning, serverless architecture, modern cloud infrastructure, and 
+    stock/crypto trading - and with an MBA and a US Patent to top it all off!\n 
+    This portfolio showcases several AI projects I've developed that demonstrate full-stack capabilities 
+    from user-facing applications and backend services, to cloud deployment, data architecture, and ML training pipelines.\n
+    I've also included a system diagram covering this entire application to display the backend architecture.
     </p>
     """, unsafe_allow_html=True)
     

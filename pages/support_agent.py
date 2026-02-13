@@ -86,14 +86,23 @@ def initialize_session_state():
     if "conversation_history" not in st.session_state:
         st.session_state.conversation_history = []
     
+    # Lazy initialization - only create agent when needed
     if "agent" not in st.session_state:
-        st.session_state.agent = CustomerSupportAgent()
+        st.session_state.agent = None
     
     if "tool_usage" not in st.session_state:
         st.session_state.tool_usage = []
     
     if "show_welcome" not in st.session_state:
         st.session_state.show_welcome = True
+
+
+def get_agent():
+    """Lazy initialization of the agent - only create when first needed."""
+    if st.session_state.agent is None:
+        with st.spinner("Initializing AI agent..."):
+            st.session_state.agent = CustomerSupportAgent()
+    return st.session_state.agent
 
 
 def render_sidebar():
@@ -314,7 +323,9 @@ if prompt := st.chat_input("How can I help you today?"):
     # Get agent response
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response, tool_calls = st.session_state.agent.chat(
+            # Initialize agent on first use
+            agent = get_agent()
+            response, tool_calls = agent.chat(
                 prompt,
                 st.session_state.conversation_history
             )

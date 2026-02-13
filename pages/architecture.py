@@ -4,85 +4,30 @@ from pathlib import Path
 
 # Page configuration
 st.set_page_config(
-    page_title="Resume App Architecture",
+    page_title="Portfolio App Architecture",
     page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🏗️ Resume App Architecture")
+st.title("🏗️ Portfolio App Architecture")
 
 st.markdown("""
-This diagram shows the complete **serverless/cloud-native** architecture of the AI Portfolio 
+The diagram below shows the complete **serverless/cloud-native** architecture of the AI Portfolio 
 application, including deployment infrastructure, application components, and external services.
 
 ---
 """)
 
-# Architecture type badge
-st.info("🚀 **Architecture Type**: Serverless / Cloud-Native - No server management required!")
-
 # Introduction
 st.markdown("""
-### About This Architecture
+### About This Design
 
-This portfolio application is built using a **modern, serverless architecture** that leverages 
+This application is built using a **modern, serverless architecture** that leverages 
 fully managed cloud services. The system is designed with the following key infrastructure:
             """)
 
-deployment_col1, deployment_col2 = st.columns(2)
 
-with deployment_col1:
-    st.markdown("""
-#### ☁️ Deployment Infrastructure
-- **Fly.io**: Frontend hosting (Streamlit in Docker container)
-- **Supabase**: Managed PostgreSQL database
-- **Qdrant Cloud**: Vector database for knowledge base
-- **Google Cloud Run**: Serverless backend for Custom GPT API
-- **OpenAI & Stability AI**: External API services
-    
-    """)
-
-with deployment_col2:
-    st.markdown("""
-#### 🔑 Key Benefits of Serverless
-- ✅ **Automatic Scaling**: All services scale based on demand
-- ✅ **Pay-per-Use**: Only pay for actual resource consumption
-- ✅ **No Server Management**: Focus on code, not infrastructure
-- ✅ **High Availability**: Built-in redundancy and failover
-- ✅ **Global Performance**: Low latency worldwide
-
-    """)
-
-
-st.divider()
-
-# Display the architecture diagram
-st.markdown("### 📊 Architecture Diagram")
-
-# Path to the SVG file
-svg_path = Path(__file__).parent.parent / '.static' / 'architecture.svg'
-
-if svg_path.exists():
-    # Read the SVG file
-    with open(svg_path, 'r', encoding='utf-8') as f:
-        svg_content = f.read()
-    
-    # Display SVG using HTML iframe for better rendering
-    components.html(
-        f"""
-        <div style="width: 100%; height: 1400px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
-            {svg_content}
-        </div>
-        """,
-        height=1450,
-        scrolling=True
-    )
-else:
-    st.error("⚠️ Architecture diagram not found at `.static/architecture.svg`")
-    st.info("Please ensure the architecture.svg file exists in the .static folder.")
-
-st.divider()
 
 # Key components explanation
 st.markdown("### 🔑 Infrastructure Components")
@@ -96,15 +41,15 @@ with col1:
     - Multi-page Streamlit app
     - Automatic horizontal scaling
     - Stateful conversation history for chatbots
-    - Functional interactions 
+    - Functional Agentic interactions 
     - Data visualization dashboard
     """)
 
     st.markdown("""
     #### ☁️ Google Cloud Run - Serverless Backend
-    **Custom GPT Model API**
-    - 10M parameter GPT model
-    - Character-level generation
+    **Dockerized Custom GPT and Image Classification Model APIs**
+    - 10M parameter GPT models (Shakespeare and Voyager)
+    - Fine-tuned ResNet50 Image Classifier
     - Auto-scaling containers
     - Pay-per-request pricing
     - Zero idle costs
@@ -125,10 +70,10 @@ with col2:
     st.markdown("""
     #### ☁️ Supabase - Database Hosting
     **Managed PostgreSQL**
-    - Products catalog, orders, returns, tickets
+    - Product catalog, orders, returns & tickets tables for Agent use
     - Automatic backups
-    - Connection pooling
-    - Real-time capabilities
+    - Connection pooling and read replicas
+    - Global availability
     """)
     
 
@@ -166,7 +111,60 @@ with tech_col3:
     - Streamlit
     - PostgreSQL
     - REST APIs
-    - WebSockets
+    - Cursor IDE for code editing                 
+    """)
+
+st.divider()
+
+# Display the architecture diagram
+st.markdown("### 📊 Architecture Diagram")
+
+# Path to the SVG file
+svg_path = Path(__file__).parent.parent / '.static' / 'architecture.svg'
+
+if svg_path.exists():
+    # Read the SVG file
+    with open(svg_path, 'r', encoding='utf-8') as f:
+        svg_content = f.read()
+    
+    # Display SVG using HTML iframe for better rendering
+    components.html(
+        f"""
+        <div style="width: 100%; height: 1400px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
+            {svg_content}
+        </div>
+        """,
+        height=1450,
+        scrolling=True
+    )
+else:
+    st.error("⚠️ Architecture diagram not found at `.static/architecture.svg`")
+    st.info("Please ensure the architecture.svg file exists in the .static folder.")
+
+st.divider()
+
+deployment_col1, deployment_col2 = st.columns(2)
+
+with deployment_col1:
+    st.markdown("""
+#### ☁️ Deployment Infrastructure
+- **Fly.io**: Frontend hosting (Streamlit in Docker container)
+- **Supabase**: Managed PostgreSQL database
+- **Qdrant Cloud**: Vector database for knowledge base
+- **Google Cloud Run**: Serverless backend for Custom GPT API
+- **OpenAI & Stability AI**: External API services
+    
+    """)
+
+with deployment_col2:
+    st.markdown("""
+#### 🔑 Key Benefits of Serverless
+- ✅ **Automatic Scaling**: All services scale based on demand
+- ✅ **Pay-per-Use**: Only pay for actual resource consumption
+- ✅ **No Server Management**: Focus on code, not infrastructure
+- ✅ **High Availability**: Built-in redundancy and failover
+- ✅ **Global Performance**: Low latency worldwide
+
     """)
 
 st.markdown("---")
