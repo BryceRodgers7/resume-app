@@ -132,18 +132,18 @@ def home_page():
 
 
 # Configure navigation with custom labels
-pages = {
-    "": [
-        st.Page(home_page, title="Home", icon="🏠", default=True),
-        st.Page("pages/support_agent.py", title="Support Agent", icon="💬"),
-        st.Page("pages/image_classifier.py", title="Image Classifier", icon="🖼️"),
-        st.Page("pages/pirate_chatbot.py", title="Pirate Chatbot", icon="🏴‍☠️"),
-        st.Page("pages/stability.py", title="Stability", icon="🎨"),
-        st.Page("pages/voyager_gpt.py", title="Voyager GPT", icon="🚀"),
-        st.Page("pages/architecture.py", title="Architecture", icon="🏗️"),
-        st.Page("pages/about_me.py", title="About Me", icon="👤"),
-    ],
-}
+# Note: Using explicit page configuration prevents Streamlit from falling back 
+# to auto-discovery mode which shows pages in alphabetical order
+pages = [
+    st.Page(home_page, title="Home", icon="🏠", default=True),
+    st.Page("pages/support_agent.py", title="Support Agent", icon="💬"),
+    st.Page("pages/image_classifier.py", title="Image Classifier", icon="🖼️"),
+    st.Page("pages/pirate_chatbot.py", title="Pirate Chatbot", icon="🏴‍☠️"),
+    st.Page("pages/stability.py", title="Stability", icon="🎨"),
+    st.Page("pages/voyager_gpt.py", title="Voyager GPT", icon="🚀"),
+    st.Page("pages/architecture.py", title="Architecture", icon="🏗️"),
+    st.Page("pages/about_me.py", title="About Me", icon="👤"),
+]
 
 pg = st.navigation(pages)
 pg.run()
