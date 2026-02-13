@@ -1,11 +1,10 @@
 import streamlit as st
 from PIL import Image
-import torch
-import torch.nn as nn
-from torchvision import transforms, models
+import requests
 import json
-from pathlib import Path
-import numpy as np
+import os
+import math
+from io import BytesIO
 
 # Page configuration
 st.set_page_config(
@@ -98,111 +97,48 @@ st.info("🧠 **Model Training Code**: Check out the complete training pipeline 
 
 st.divider()
 
-# Model configuration
-MODEL_PATH = Path(__file__).parent.parent / 'models' / 'bird_plane_superman_other_classifier_latest.pth'
-METADATA_PATH = Path(__file__).parent.parent / 'models' / 'bird_plane_superman_other_classifier_metadata.json'
+# API configuration
+API_URL = os.getenv('BPSIMGCLSS_API_URL', '')
 
-@st.cache_resource
-def load_model():
-    """Load the trained classifier model"""
+def predict_with_api(image_file):
+    """Make prediction on image using API endpoint"""
     try:
-        # Load metadata
-        if METADATA_PATH.exists():
-            with open(METADATA_PATH, 'r') as f:
-                metadata = json.load(f)
-            class_names = metadata['class_names']
-            num_classes = metadata['num_classes']
-            entropy_threshold = metadata.get('entropy_threshold', 0.7)
-        else:
-            # Default fallback - assume 4-class model
-            class_names = ['bird', 'other', 'plane', 'superman']
-            num_classes = 4
-            entropy_threshold = 0.7
+        # Reset file pointer to beginning
+        image_file.seek(0)
         
-        # Create model architecture (must match training)
-        model = models.resnet18(pretrained=False)
-        num_ftrs = model.fc.in_features
-        model.fc = nn.Sequential(
-            nn.Linear(num_ftrs, 512),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(512, num_classes)
-        )
+        # Prepare the image file for POST request
+        files = {'file': ('image.jpg', image_file, 'image/jpeg')}
         
-        # Load trained weights
-        if MODEL_PATH.exists():
-            model.load_state_dict(torch.load(MODEL_PATH, map_location='cpu'))
-            model.eval()
-            return model, class_names, entropy_threshold, True
-        else:
-            return None, class_names, entropy_threshold, False
-            
+        # Make POST request to /predict endpoint
+        api_endpoint = f"{API_URL}/predict"
+        response = requests.post(api_endpoint, files=files, timeout=30)
+        
+        # Check if request was successful
+        response.raise_for_status()
+        
+        # Parse JSON response
+        result = response.json()
+        
+        return result, None
+        
+    except requests.exceptions.Timeout:
+        return None, "Request timed out. The API server may be slow or unresponsive."
+    except requests.exceptions.ConnectionError:
+        return None, "Could not connect to the API server. Please check if the server is running."
+    except requests.exceptions.HTTPError as e:
+        return None, f"API returned an error: {e.response.status_code} - {e.response.text}"
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
-        return None, ['bird', 'other', 'plane', 'superman'], 0.7, False
+        return None, f"Error making prediction: {str(e)}"
 
-def preprocess_image(image):
-    """Preprocess image for model input"""
-    # Define the same transforms as during training (validation transforms)
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-    
-    # Convert to RGB if necessary
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    
-    # Apply transforms and add batch dimension
-    img_tensor = transform(image).unsqueeze(0)
-    return img_tensor
-
-def predict(model, image_tensor, class_names, entropy_threshold):
-    """Make prediction on image with entropy-based uncertainty detection"""
-    with torch.no_grad():
-        outputs = model(image_tensor)
-        probabilities = torch.nn.functional.softmax(outputs, dim=1)
-        confidence, predicted_idx = torch.max(probabilities, 1)
-        
-        confidence_score = confidence.item()
-        predicted_idx_val = predicted_idx.item()
-        
-        # Calculate entropy for uncertainty detection
-        # Entropy = -Σ(p_i * log(p_i))
-        # High entropy means the model is uncertain (probabilities are spread out)
-        log_probs = torch.log(probabilities + 1e-10)  # Add small value to avoid log(0)
-        entropy = -torch.sum(probabilities * log_probs, dim=1)
-        
-        # Normalize entropy to [0, 1] range
-        max_entropy = np.log(len(class_names))
-        normalized_entropy = entropy.item() / max_entropy
-        
-        # Get all class probabilities
-        all_probs = probabilities[0].numpy()
-        
-        # Determine predicted class using entropy-based detection
-        predicted_class = class_names[predicted_idx_val]
-        
-        # If entropy is high, the model is uncertain -> classify as "other"
-        # This catches cases where probabilities are spread out (e.g., [0.3, 0.25, 0.25, 0.2])
-        if normalized_entropy > entropy_threshold:
-            predicted_class = 'other'
-            detection_reason = 'high_entropy'
-        # If model already predicted "other" class, keep it
-        elif predicted_class == 'other':
-            detection_reason = 'predicted_other'
-        else:
-            detection_reason = 'confident_prediction'
-        
-    return predicted_class, confidence_score, all_probs, normalized_entropy, detection_reason
-
-# Sidebar - Model Status
+# Sidebar - API Status
 with st.sidebar:
-    st.subheader("🔌 Model Status")
-    st.info("💤 Model will load when you classify an image")
-    st.caption("🚀 Lazy loading saves memory!")
+    st.subheader("🔌 API Status")
+    if API_URL:
+        st.success(f"✅ API URL configured")
+        st.caption(f"Endpoint: {API_URL}/predict")
+    else:
+        st.error("❌ API URL not configured")
+        st.caption("Set BPSIMGCLSS_API_URL environment variable")
     st.caption("[View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)")
 
 # File uploader
@@ -225,20 +161,43 @@ if uploaded_file:
         st.markdown("### 🔍 Classification")
         
         if st.button("Classify Image", type="primary", use_container_width=True):
-            with st.spinner("Loading model and analyzing image..."):
-                # Load model (lazy loading - only when button is clicked)
-                model, class_names, entropy_threshold, model_loaded = load_model()
+            # Check if API URL is configured
+            if not API_URL:
+                st.error("❌ API URL not configured. Please set the BPSIMGCLSS_API_URL environment variable.")
+                st.stop()
+            
+            with st.spinner("Analyzing image via API..."):
+                # Convert image to bytes for API request
+                img_byte_arr = BytesIO()
+                image.save(img_byte_arr, format=image.format or 'JPEG')
+                img_byte_arr.seek(0)
                 
-                if not model_loaded:
-                    st.error("❌ Model file not found. Cannot perform classification.")
-                    st.caption("[View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)")
+                # Make API prediction
+                result, error = predict_with_api(img_byte_arr)
+                
+                if error:
+                    st.error(f"❌ {error}")
                     st.stop()
                 
-                # Preprocess and predict
-                img_tensor = preprocess_image(image)
-                predicted_class, confidence, all_probs, entropy, detection_reason = predict(
-                    model, img_tensor, class_names, entropy_threshold
-                )
+                # Extract results from API response
+                predicted_class = result['predicted_class']
+                confidence = result['confidence']
+                all_probs = result['probabilities']
+                threshold_applied = result.get('threshold_applied', False)
+                
+                # Calculate entropy from probabilities for display purposes
+                prob_values = list(all_probs.values())
+                entropy = -sum(p * math.log(p + 1e-10) for p in prob_values)
+                max_entropy = math.log(len(prob_values))
+                normalized_entropy = entropy / max_entropy if max_entropy > 0 else 0
+                
+                # Determine detection reason
+                if threshold_applied:
+                    detection_reason = 'high_entropy'
+                elif predicted_class == 'other':
+                    detection_reason = 'predicted_other'
+                else:
+                    detection_reason = 'confident_prediction'
                 
                 # Display result with emoji
                 emoji_map = {
@@ -258,25 +217,25 @@ if uploaded_file:
                 with metric_col1:
                     st.metric("Confidence", f"{confidence * 100:.1f}%")
                 with metric_col2:
-                    st.metric("Entropy", f"{entropy:.3f}", 
+                    st.metric("Entropy", f"{normalized_entropy:.3f}", 
                              help="Lower entropy = more certain. Higher entropy = more uncertain/spread out probabilities")
                 
                 # Progress bar for confidence
                 st.progress(confidence)
                 
                 # Show detection reasoning
+                entropy_threshold = 0.7  # Default threshold for display
                 if detection_reason == 'high_entropy':
-                    st.warning(f"⚠️ **High Uncertainty Detected** (entropy: {entropy:.3f} > {entropy_threshold:.2f})")
+                    st.warning(f"⚠️ **High Uncertainty Detected** (entropy: {normalized_entropy:.3f} > {entropy_threshold:.2f})")
                     st.caption("The model's predictions are spread across multiple classes, indicating this image doesn't clearly match any trained category.")
                 elif detection_reason == 'predicted_other':
                     st.info("📦 **Classified as 'Other'** - The model learned this doesn't match bird/plane/superman patterns")
                 else:
-                    st.success(f"✅ **Confident Prediction** (entropy: {entropy:.3f} ≤ {entropy_threshold:.2f})")
+                    st.success(f"✅ **Confident Prediction** (entropy: {normalized_entropy:.3f} ≤ {entropy_threshold:.2f})")
                 
                 # Show all class probabilities
                 st.markdown("### 📊 Confidence Breakdown:")
-                for idx, class_name in enumerate(class_names):
-                    prob = all_probs[idx]
+                for class_name, prob in all_probs.items():
                     emoji_icon = emoji_map.get(class_name, '❓')
                     st.write(f"{emoji_icon} **{class_name.capitalize()}**: {prob * 100:.1f}%")
                     st.progress(float(prob))
@@ -286,7 +245,7 @@ if uploaded_file:
                     st.markdown(f"""
                     **Prediction Metrics:**
                     - **Max Confidence**: {confidence * 100:.2f}%
-                    - **Normalized Entropy**: {entropy:.4f} (threshold: {entropy_threshold:.2f})
+                    - **Normalized Entropy**: {normalized_entropy:.4f} (threshold: {entropy_threshold:.2f})
                     - **Detection Method**: {detection_reason.replace('_', ' ').title()}
                     
                     **Entropy Interpretation:**
@@ -298,8 +257,9 @@ if uploaded_file:
                     """)
                     
                     # Show if distribution is uniform or peaked
-                    max_prob = max(all_probs)
-                    min_prob = min(all_probs)
+                    prob_values_list = list(all_probs.values())
+                    max_prob = max(prob_values_list)
+                    min_prob = min(prob_values_list)
                     if max_prob - min_prob < 0.2:
                         st.caption("⚖️ Flat distribution - model is very uncertain")
                     else:
