@@ -4,9 +4,6 @@ import os
 import sys
 import logging
 from pathlib import Path
-from chatbot.agent import CustomerSupportAgent
-from chatbot.prompts import WELCOME_MESSAGE
-from tools.schemas import get_tool_descriptions
 
 # Page configuration
 st.set_page_config(
@@ -100,6 +97,8 @@ def initialize_session_state():
 def get_agent():
     """Lazy initialization of the agent - only create when first needed."""
     if st.session_state.agent is None:
+        # Import only when needed
+        from chatbot.agent import CustomerSupportAgent
         with st.spinner("Initializing AI agent..."):
             st.session_state.agent = CustomerSupportAgent()
     return st.session_state.agent
@@ -134,7 +133,8 @@ def render_sidebar():
         # Available Tools section at the bottom
         st.markdown("### 🔧 Available Tools")
         
-        # Get tool descriptions
+        # Get tool descriptions (lazy import)
+        from tools.schemas import get_tool_descriptions
         tool_descriptions = get_tool_descriptions()
         
         for tool_name, description in tool_descriptions.items():
@@ -292,6 +292,8 @@ api_key_configured = bool(os.getenv("OPENAI_API_KEY"))
 
 # Display welcome message
 if st.session_state.show_welcome:
+    # Import only when displaying welcome message
+    from chatbot.prompts import WELCOME_MESSAGE
     with st.chat_message("assistant"):
         st.markdown(WELCOME_MESSAGE)
     st.session_state.show_welcome = False

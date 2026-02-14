@@ -14,7 +14,7 @@ A Streamlit-based portfolio app showcasing various AI/ML projects and demos.
 
 1. Clone this repository:
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/BryceRodgers7/resume-app.git
 cd resume-app
 ```
 

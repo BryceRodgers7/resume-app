@@ -57,8 +57,7 @@ def home_page():
     stock/crypto trading - and with an MBA and a US Patent to top it all off!\n 
     This portfolio showcases several AI projects I've developed that demonstrate full-stack capabilities 
     from user-facing applications and backend services, to cloud deployment, data architecture, and ML training pipelines.\n
-    I've also included a system diagram covering this entire application to display the backend architecture.
-    </p>
+    I've also included a system diagram covering this entire application to display the backend architecture. You can find the code for this application [here](https://github.com/BryceRodgers7/resume-app).
     """, unsafe_allow_html=True)
     
     st.markdown("---")
