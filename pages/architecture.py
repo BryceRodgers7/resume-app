@@ -90,7 +90,7 @@ with tech_col1:
     - **Fly.io** (Frontend)
     - **Supabase** (Database)
     - **Qdrant Cloud** (Vectors)
-    - **Google Cloud Run** (Backend)
+    - **Google Cloud Run & Storage** (Backend & storage)
     - **Docker** (Containers)
     """)
 
