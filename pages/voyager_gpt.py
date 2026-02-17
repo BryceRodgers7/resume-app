@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 import os
 import logging
+import nav
+from app import home_page
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -14,6 +16,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+nav.config_navigation(home_page)
 
 st.title("🧠 Custom-Trained Language Models")
 

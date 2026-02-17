@@ -5,6 +5,8 @@ import json
 import os
 import math
 from io import BytesIO
+import nav
+from app import home_page
 
 # Page configuration
 st.set_page_config(
@@ -13,6 +15,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+nav.config_navigation(home_page)
 
 st.title("🖼️ Is It a Bird? Is It a Plane? 🦸")
 

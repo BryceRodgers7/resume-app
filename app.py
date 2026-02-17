@@ -1,6 +1,8 @@
 import streamlit as st
 import os
 import logging
+import nav
+# from home_page import home_page
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -12,8 +14,6 @@ logger = logging.getLogger(__name__)
 logging.getLogger('database.db_manager').setLevel(logging.DEBUG)
 logger.info("Query logging enabled (DEBUG level)")
 
-
-
 # Page configuration
 st.set_page_config(
     page_title="AI + Backend Developer Portfolio - Bryce Rodgers",
@@ -21,8 +21,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-st.sidebar.caption(f"Streamlit version: {st.__version__}")
 
 def home_page():
     """Home page content"""
@@ -133,19 +131,6 @@ def home_page():
     st.info("👈 Use the sidebar to navigate between different projects and demos!")
 
 
-# Configure navigation with custom labels
-# Note: Using explicit page configuration prevents Streamlit from falling back 
-# to auto-discovery mode which shows pages in alphabetical order
-pages = [
-    st.Page(home_page, title="Home", icon="🏠", default=True),
-    st.Page("pages/support_agent.py", title="Support Agent", icon="💬"),
-    st.Page("pages/image_classifier.py", title="Image Classifier", icon="🖼️"),
-    st.Page("pages/pirate_chatbot.py", title="Pirate Chatbot", icon="🏴‍☠️"),
-    st.Page("pages/stability.py", title="Stability", icon="🎨"),
-    st.Page("pages/voyager_gpt.py", title="Voyager GPT", icon="🚀"),
-    st.Page("pages/architecture.py", title="Architecture", icon="🏗️"),
-    st.Page("pages/about_me.py", title="About Me", icon="👤"),
-]
 
-pg = st.navigation(pages)
-pg.run()
+# import navigation
+nav.config_navigation(home_page)

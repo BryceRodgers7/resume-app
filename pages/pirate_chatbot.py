@@ -1,6 +1,8 @@
 import streamlit as st
 import os
 from openai import OpenAI
+import nav
+from app import home_page
 
 # Page configuration
 st.set_page_config(
@@ -9,6 +11,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+nav.config_navigation(home_page)
 
 st.title("🏴‍☠️ Pirate Chatbot")
 

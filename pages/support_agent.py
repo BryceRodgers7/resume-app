@@ -4,6 +4,8 @@ import os
 import sys
 import logging
 from pathlib import Path
+import nav
+from app import home_page
 
 # Page configuration
 st.set_page_config(
@@ -12,6 +14,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+nav.config_navigation(home_page)
 
 # Configure logging (don't import from app.py to avoid rendering homepage)
 logger = logging.getLogger(__name__)

@@ -7,6 +7,8 @@ import requests
 import time
 import getpass
 from random import randrange
+import nav
+from app import home_page
 
 # Page configuration
 st.set_page_config(
@@ -15,6 +17,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+nav.config_navigation(home_page)
 
 # current_content = io.BytesIO()
 
