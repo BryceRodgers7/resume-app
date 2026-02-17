@@ -22,6 +22,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+st.sidebar.caption(f"Streamlit version: {st.__version__}")
+
 def home_page():
     """Home page content"""
     # Custom CSS for better styling
