@@ -75,8 +75,6 @@ with st.expander("💡 Try it Out", expanded=False):
     - **Continuous generation**: Generated text is automatically appended to build longer narratives
     """)
 
-st.info("🏗️ **Infrastructure**: This model runs on Google Cloud Run with automatic scaling. When idle, the service scales to zero (no cost). Use the 'Check API Status' button in the sidebar to verify the connection. Generation may take 5-10 seconds depending on context size and max tokens.")
-
 st.divider()
 
 # Configuration
