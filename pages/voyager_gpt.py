@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 
 # Page configuration
 st.set_page_config(
-    page_title="Custom GPT Model",
+    page_title="Custom GPT Models",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -49,6 +49,7 @@ with st.expander("🔧 Technical Architecture", expanded=False):
     - **Character-Level Generation**: Models generate text character-by-character
     - **Training**: Custom dataset with domain-specific content
     - **Inference**: Hosted on Google Cloud Run (serverless)
+    - **KV-Caching**: Key-value caching for faster response times
 
     **Generation Controls:**
     - **Seed**: Reproducible generation for testing and debugging
