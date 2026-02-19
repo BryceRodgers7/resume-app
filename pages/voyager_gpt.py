@@ -37,9 +37,8 @@ with st.expander("🎯 What This Demonstrates", expanded=False):
       - Attention mechanisms and positional encoding
       - Loss calculation and optimization
       - Hyperparameter tuning
-    - **MLOps & Deployment**: Models deployed as a REST API on Google Cloud Run with containerization
-    - **Character-Level Generation**: Models generate text character-by-character
-    - **Cloud Infrastructure**: Serverless deployment with automatic scaling and cost optimization
+    - **MLOps & Deployment**: Models deployed as a REST API on Google Cloud Run with containerization and automatic scaling
+    - **View the Code**: [repository](https://github.com/BryceRodgers7/brycegpt)
     """)
 
 with st.expander("🔧 Technical Architecture", expanded=False):
@@ -47,9 +46,9 @@ with st.expander("🔧 Technical Architecture", expanded=False):
     **Model Specifications:**
     - **Parameters**: 10 million trainable parameters
     - **Architecture**: GPT-style decoder-only transformer
+    - **Character-Level Generation**: Models generate text character-by-character
     - **Training**: Custom dataset with domain-specific content
     - **Inference**: Hosted on Google Cloud Run (serverless)
-    - **API**: FastAPI with Pydantic validation
 
     **Generation Controls:**
     - **Seed**: Reproducible generation for testing and debugging
@@ -62,7 +61,7 @@ with st.expander("💡 Try it Out", expanded=False):
     st.markdown("""
     **Example Contexts (Voyager Model):**
     - PARIS: Warp engines are offline!
-    - JANEYWAY: Captain's log, stardate 51390.4
+    - JANEWAY: Captain's log, stardate 51390.4
     
     **Example Contexts (Shakespeare Model):**
     - To be or not to be
