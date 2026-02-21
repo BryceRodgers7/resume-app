@@ -29,52 +29,42 @@ practical computer vision implementation, including training pipeline design, en
 
 with st.expander("🎯 What This Demonstrates", expanded=False):
     st.markdown("""
-    - **Transfer Learning**: Fine-tuned ResNet18 architecture pre-trained on ImageNet for custom classification
-    - **PyTorch Implementation**: Complete training pipeline with data augmentation, optimization, and model persistence
-    - **Dual OOD Detection Strategy**: 
-      - **Explicit "Other" Class**: Trained on diverse out-of-distribution images
-      - **Entropy-Based Detection**: Uses prediction entropy to identify uncertain/anomalous inputs
-    - **Model Deployment**: Serialized model loading, preprocessing pipeline, and inference serving in production
-    - **Computer Vision Best Practices**: 
-      - Image preprocessing and normalization
-      - Data augmentation strategies
-      - Batch processing and GPU optimization
-    - **State Management**: Cached model loading for performance optimization
+    - **Transfer Learning**: Fine-tuned ResNet50 architecture pre-trained on ImageNet for custom classification
+    - **Complete Training Pipeline**:  Including raw data collection, early-loss cleaning, and hard-negative mining
+    - **Model Deployment**: Containerized inference model, in a scalable Cloud Run service
     """)
 
 with st.expander("🔧 Technical Architecture", expanded=False):
     st.markdown("""
-    **Model Specifications:**
-    - **Base Architecture**: ResNet18 (pre-trained on ImageNet)
-    - **Custom Head**: 512-neuron fully connected layer with ReLU + Dropout (0.3)
-    - **Classes**: 4 trained categories (bird, plane, superman, other)
-    - **Input**: 224x224 RGB images with ImageNet normalization
-    - **Framework**: PyTorch with torchvision transforms
-    
-    **Training Pipeline:**
+    **Model Specifications:**               
+    - **Architecture**: ImageNet-pretrained ResNet50 with fine-tuned final residual block
+    - **Classifier**: Linear head on 2048-D pooled features (2048 → 4 classes)
+    - **Input**: 224x224 RGB, ImageNet normalization
+    - **Framework**: PyTorch / torchvision
+    """)
+
+with st.expander("🔍 Training Pipeline", expanded=False):
+    st.markdown("""
+    **Training Plan**
+    1) Collect initial dataset
+    2) Remove duplicates using pHash
+    3) Train model (just the head, 3 epochs)
+    4) Early-loss clean mislabeled data
+    5) Retrain (from scratch, 15 epochs)
+    6) Hard-negative mining
+    7) Train again with mined images (fine-tune, 2 epochs)
+    8) Temperature calibration
+    9) Choose confidence threshold (currently at this step)
+    10) Final evaluation on challenge set (coming soon!)
+                
+    **Training Specifications:**
+    - Batch processing with GPU optimization
     - Data augmentation (resize, crop, random flips, color jitter)
     - Transfer learning with frozen early layers
     - CrossEntropyLoss optimization with Adam
     - Validation-based checkpointing
-    - [View training code on GitHub →](https://github.com/bryceglarsen/resume-app/tree/main/model_tuning)
-    
-    **Dual Out-of-Distribution (OOD) Detection:**
-    This model uses **two complementary strategies** to detect unfamiliar images:
-    
-    1. **Explicit "Other" Class Training**: 
-       - Trained on diverse images (cars, people, landscapes, etc.)
-       - Learns explicit patterns of what is NOT bird/plane/superman
-    
-    2. **Entropy-Based Uncertainty Detection**:
-       - Calculates prediction entropy: H = -Σ(p_i * log(p_i))
-       - High entropy (flat probability distribution) → model is uncertain
-       - Example: [0.25, 0.25, 0.25, 0.25] has high entropy (very uncertain)
-       - Example: [0.9, 0.05, 0.03, 0.02] has low entropy (very confident)
-       - Images with high entropy are reclassified as "other"
-       - More robust to novel image types not seen during training
-    
-    This **layered approach** provides better protection against false positives on out-of-distribution images.
     """)
+
 
 with st.expander("💡 Try it Out", expanded=False):
     st.markdown("""
@@ -87,7 +77,6 @@ with st.expander("💡 Try it Out", expanded=False):
     **Tips for Best Results:**
     - Use clear, well-lit images with visible subjects
     - Avoid heavily cropped or blurry photos
-    - The model works best with images similar to training data
     - Watch the **entropy metric** - it tells you how uncertain the model is
     - Try uploading completely unrelated images (cars, food, people) to see the OOD detection in action!
     
@@ -97,7 +86,7 @@ with st.expander("💡 Try it Out", expanded=False):
     - The model now has **two layers of protection** against false positives
     """)
 
-st.info("🧠 **Model Training Code**: Check out the complete training pipeline and scripts on [GitHub in the  `model_tuning/`  folder](https://github.com/BryceRodgers7/resume-app/tree/main/model_tuning)!")
+st.info("🧠 **Model Training Code**: Check out the complete training pipeline code on [GitHub →](https://github.com/BryceRodgers7/img-classifier-birdplanesuper)!")
 
 st.divider()
 
