@@ -53,11 +53,11 @@ def home_page():
 
     st.markdown("""
     <p style="font-size: 16px;">
-    I'm a senior software engineer with a passion for Machine Learning, serverless architecture, modern cloud infrastructure, and 
-    stock/crypto trading - and with an MBA and a US Patent to top it all off!\n 
-    This portfolio showcases several AI projects I've developed that demonstrate full-stack capabilities 
-    from user-facing applications and backend services, to cloud deployment, data architecture, and ML training pipelines.\n
-    I've also included a system diagram covering this entire application to display the backend architecture. You can find the code for this application [here](https://github.com/BryceRodgers7/resume-app).
+    I am a Senior Software Engineer and Applied Machine Learning Engineer specializing in full-stack AI systems, serverless architecture, and modern cloud infrastructure. 
+    This portfolio highlights deployed ML applications spanning computer vision, large language models, retrieval-augmented generation, and document intelligence workflows.
+    Each project demonstrates end-to-end implementation—from model training and data pipelines to cloud-hosted inference services and scalable backend architecture.
+    You can view the source code for this application <a href="https://github.com/BryceRodgers7/resume-app">here</a>.
+    </p>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
