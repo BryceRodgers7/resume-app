@@ -67,15 +67,27 @@ def home_page():
 
     with col1:
         st.markdown("""
-        ### 🎯 What You'll Find Here
-        
-        - **Customer Support Chatbot**: An agentic customer support system with intelligent routing
-        - **Image Classifier**: A custom-trained image classification model
-        - **Simple Chatbot**: Interactive chatbot with a customizable system prompt
-        - **Text-to-Image Generator**: Create images from text using Stability AI
-        - **Custom GPT Model**: A 11-million parameter GPT model I trained from scratch
-        - **Architecture**: A serverless architecture diagram for this application
-        - **About Me**: A page about me and my background
+        ### 🚀 Featured Systems
+
+        - **Agentic Customer Support System**  
+        Tool-enabled LLM application with semantic search and automated order workflows
+
+        - **Custom Image Classification Pipeline**  
+        Fine-tuned ResNet50 with dataset curation, hard-negative mining, and calibrated inference
+
+        - **Decoder-Only Transformer Model (11M parameters)**  
+        Custom-trained GPT-style language model with deployed inference endpoint
+
+        - **LLM Document Processing Workflow**  
+        Automated extraction of structured organizational data from unstructured grant proposals
+
+        - **Text-to-Image Generation Service**  
+        Stability AI integration with serverless deployment
+
+        - **System Architecture Overview**  
+        End-to-end serverless infrastructure diagram including frontend, APIs, vector database, and model services
+
+        - **About Me**
         
         """)
 
