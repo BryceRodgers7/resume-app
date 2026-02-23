@@ -41,7 +41,7 @@ def home_page():
         """, unsafe_allow_html=True)
 
     # Sidebar
-    st.sidebar.title("🤖 AI Portfolio")
+    st.sidebar.title("🤖 Portfolio")
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🔗 Links")
     st.sidebar.markdown("[GitHub](https://github.com/BryceRodgers7)")
