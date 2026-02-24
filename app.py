@@ -45,8 +45,8 @@ def home_page():
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🔗 Links")
     st.sidebar.markdown("[GitHub](https://github.com/BryceRodgers7)")
-    st.sidebar.markdown("[Business Website] Coming Soon!")
     st.sidebar.markdown("[LinkedIn](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
+    st.sidebar.markdown("[Givio - Non-Profit Discovery Platform (Coming Soon)] (https://www.giviogives.com)")
 
     # Main content
     st.title("Welcome to Bryce Rodgers AI Portfolio 🤖")
@@ -131,12 +131,14 @@ def home_page():
             st.markdown("[GitHub Profile](https://github.com/BryceRodgers7)")
 
     with col2:
-        if st.button("💼 My Business", use_container_width=True):
-            st.info("Coming Soon!")
-
-    with col3:
         if st.button("💻 LinkedIn", use_container_width=True):
             st.markdown("[LinkedIn Profile](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
+    
+    with col3:
+        if st.button("💼 My Startup - Givio (Coming Soon)", use_container_width=True):
+            st.info("[Givio - Non-Profit Discovery Platform](https://www.giviogives.com)")
+
+    
 
     st.markdown("---")
 
