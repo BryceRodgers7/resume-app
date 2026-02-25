@@ -21,7 +21,6 @@ def config_navigation(home_page):
             st.Page("pages/stability.py", title="Stability", icon="🎨"),
             st.Page("pages/voyager_gpt.py", title="Voyager GPT", icon="🚀"),
             st.Page("pages/architecture.py", title="Architecture", icon="🏗️"),
-            st.Page("pages/about_me.py", title="About Me", icon="👤"),
         ]
         pg = st.navigation(pages)
         pg.run()

@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import logging
 import nav
+from pathlib import Path
 # from home_page import home_page
 
 # Configure logging
@@ -25,6 +26,11 @@ st.set_page_config(
 def home_page():
     """Home page content"""
     # Custom CSS for better styling
+
+    photo_path = Path(__file__).parent.parent / '.static' / 'me.jpg'
+    # display my photo (convert Path to string for Streamlit compatibility)
+    st.image(str(photo_path), width=231, caption="Bryce Rodgers")
+
     st.markdown("""
         <style>
         .main {
@@ -46,16 +52,21 @@ def home_page():
     st.sidebar.markdown("### 🔗 Links")
     st.sidebar.markdown("[GitHub](https://github.com/BryceRodgers7)")
     st.sidebar.markdown("[LinkedIn](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
-    st.sidebar.markdown("[Givio - Non-Profit Discovery Platform (Coming Soon)] (https://www.giviogives.com)")
+    st.sidebar.markdown("[Givio](https://www.giviogives.com) A Discovery Platform for Non-Profit Donors (In Development)")
 
     # Main content
     st.title("Welcome to Bryce Rodgers AI Portfolio 🤖")
 
     st.markdown("""
     <p style="font-size: 16px;">
-    I am a Senior Software Engineer and Applied Machine Learning Engineer specializing in full-stack AI systems, serverless architecture, and modern cloud infrastructure. 
-    This portfolio highlights deployed ML applications spanning computer vision, large language models, retrieval-augmented generation, and document intelligence workflows.
-    Each project demonstrates end-to-end implementation—from model training and data pipelines to cloud-hosted inference services and scalable backend architecture.
+    I am a Senior Software Engineer and Applied Machine Learning Engineer with more than 15 years of experience building scalable backend systems, developer tooling, and data-driven applications. I specialize in full-stack AI systems, serverless architecture, and modern cloud infrastructure, with a focus on taking ideas from model training to production deployment.
+
+    I’ve shipped large production systems at companies like Pearson and Samsung, designing reliable software used by millions of people. I hold a U.S. patent (US9299264B2 — Sound Assessment and Remediation) and have an academic foundation in Mathematics, Statistics, Computer Science, and Business Administration. That background shapes how I approach engineering decisions — balancing technical rigor, practical outcomes, and long-term system design.
+
+    In recent years, my work has centered on AI-driven applications and cloud-native ML workflows. This portfolio highlights deployed projects spanning computer vision, large language models, retrieval-augmented generation, and document intelligence systems. Each project demonstrates end-to-end implementation — from data pipelines and model training to cloud-hosted inference services and scalable backend architecture.
+
+    I’m currently building a new application focused on connecting non-profit organizations with donors based on alignment of shared values. I’m particularly interested in practical AI systems that combine LLMs, vector search, and traditional software engineering to create reliable, usable tools.
+
     You can view the source code for this application <a href="https://github.com/BryceRodgers7/resume-app">here</a>.
     </p>
     """, unsafe_allow_html=True)
@@ -117,32 +128,6 @@ def home_page():
 
     st.markdown("---")
 
-    st.markdown("""
-    ### 🌐 Connect With Me
-
-    Feel free to explore the demos using the navigation on the left. You can also find me at:
-    """)
-
-    # Create buttons for links
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        if st.button("📁 View My GitHub", use_container_width=True):
-            st.markdown("[GitHub Profile](https://github.com/BryceRodgers7)")
-
-    with col2:
-        if st.button("💻 LinkedIn", use_container_width=True):
-            st.markdown("[LinkedIn Profile](https://www.linkedin.com/in/bryce-rodgers-dat7/)")
-    
-    with col3:
-        if st.button("💼 My Startup - Givio (Coming Soon)", use_container_width=True):
-            st.info("[Givio - Non-Profit Discovery Platform](https://www.giviogives.com)")
-
-    
-
-    st.markdown("---")
-
-    st.info("👈 Use the sidebar to navigate between different projects and demos!")
 
 
 
