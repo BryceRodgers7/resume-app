@@ -78,27 +78,25 @@ def home_page():
 
     with col1:
         st.markdown("""
-        ### 🚀 Featured Systems
+    ### 🚀 Deployed AI Systems
 
-        - **Agentic Customer Support System**  
-        Tool-enabled LLM application with semantic search and automated order workflows
+    - **Agentic Customer Support Platform**  
+    Tool-enabled LLM system with semantic search, structured tool execution, and automated order workflows deployed via cloud-hosted APIs
 
-        - **Custom Image Classification Pipeline**  
-        Fine-tuned ResNet50 with dataset curation, hard-negative mining, and calibrated inference
+    - **Custom Image Classification Pipeline**  
+    Fine-tuned ResNet50 model with dataset curation, hard-negative mining, confidence calibration, and production inference endpoint
 
-        - **Decoder-Only Transformer Model (11M parameters)**  
-        Custom-trained GPT-style language model with deployed inference endpoint
+    - **Decoder-Only Transformer (11M Parameters)**  
+    Custom-trained GPT-style language model with tokenization, training pipeline, and scalable cloud deployment
 
-        - **LLM Document Processing Workflow**  
-        Automated extraction of structured organizational data from unstructured grant proposals
+    - **LLM Document Intelligence Workflow**  
+    End-to-end pipeline for extracting structured organizational data from unstructured grant proposals using LLMs and validation logic
 
-        - **Text-to-Image Generation Service**  
-        Stability AI integration with serverless deployment
+    - **Text-to-Image Generation Service**  
+    Stability AI integration with serverless backend and frontend orchestration
 
-        - **System Architecture Overview**  
-        End-to-end serverless infrastructure diagram including frontend, APIs, vector database, and model services
-
-        - **About Me**
+    - **System Architecture Overview**  
+    Full-stack serverless infrastructure diagram covering frontend, API services, vector database, model hosting, and data storage
         
         """)
 
