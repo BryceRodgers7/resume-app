@@ -27,7 +27,7 @@ def home_page():
     """Home page content"""
     # Custom CSS for better styling
 
-    photo_path = Path(__file__).parent.parent / '.static' / 'me.jpg'
+    photo_path = Path(__file__).parent / '.static' / 'me.jpg'
     # display my photo (convert Path to string for Streamlit compatibility)
     st.image(str(photo_path), width=231, caption="Bryce Rodgers")
 
