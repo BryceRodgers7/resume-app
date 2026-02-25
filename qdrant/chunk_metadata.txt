@@ -1,0 +1,477 @@
+================================================================================
+CHUNK METADATA REPORT
+================================================================================
+
+SORTED CHUNK LIST (ID + Title):
+--------------------------------------------------------------------------------
+agent-sop-create-order: create_order Tool - Standard Operating Procedure
+agent-sop-customer-tone: Customer communication standards
+agent-sop-draft-order: draft_order Tool - Standard Operating Procedure
+agent-sop-escalations: General escalation SOP
+agent-sop-estimate-shipping: estimate_shipping Tool - Standard Operating Procedure
+agent-sop-initiate-return: initiate_return Tool - Standard Operating Procedure
+agent-sop-knowledge-search: Knowledge base search SOP
+agent-sop-order-status: order_status Tool - Standard Operating Procedure
+agent-sop-order: Order handling SOP
+agent-sop-product-catalog: product_catalog Tool - Standard Operating Procedure
+agent-sop-product-lookup: Product lookup SOP
+agent-sop-returns-escalation: Returns escalation SOP
+agent-sop-returns: Returns handling SOP
+agent-sop-shipping: Shipping inquiry SOP
+agent-sop-support-triage: Support ticket triage SOP
+agent-sop-warranty-check: Warranty eligibility SOP
+agent-tool-contract-audio: Audio troubleshooting tool guidelines
+agent-tool-contract-inventory: Inventory check guidelines
+agent-tool-contract-orders: Order-related tool guidelines
+agent-tool-contract-returns-final: Final return processing rules
+agent-tool-contract-returns: Return tool usage guidelines
+agent-tool-contract-search: Knowledge search tool usage
+agent-tool-contract-shipping: Shipping tool usage
+agent-tool-contract-tickets: Support ticket tool guidelines
+agent-tool-contract-warranty: Warranty tool guidelines
+agent-tool-contracts: Tool usage guidelines
+agent-tool-errors: Handling tool errors
+macro-address-confirm: Confirm shipping address
+macro-apology-delay: Apology for delay
+macro-billing-question: Billing inquiry acknowledgment
+macro-clarify-issue: Clarify issue
+macro-close-case: Case closure
+macro-confirm-details: Confirm details
+macro-delay-apology: Apology for extended delay
+macro-escalation-update: Escalation update
+macro-escalation: Escalation notice
+macro-followup: Follow-up check-in
+macro-next-steps: Outline next steps
+macro-request-info: Request additional information
+macro-request-photos: Request photos for review
+macro-request-serial: Request serial number
+macro-resolution-confirm: Confirm resolution
+macro-return-instructions: Return instructions
+macro-shipping-delay: Shipping delay notice
+macro-status-update: Status update
+macro-troubleshooting-start: Begin troubleshooting
+macro-welcome: Welcome message
+policy-backorders: Backordered items
+policy-cancellations: Order cancellations
+policy-damaged-items: Damaged item claims
+policy-delivery-issues: Delivery issues and lost packages
+policy-exchanges: Exchanges and replacements
+policy-extended-warranty: Extended warranty options
+policy-partial-returns: Partial returns
+policy-privacy: Customer privacy and data use
+policy-refund-methods: Refund methods
+policy-refunds: Refund processing timelines
+policy-restocking: Restocking considerations
+policy-return-window: Return window details
+policy-returns-accessories: Returns for accessories
+policy-returns: Returns policy overview
+policy-rma-process: RMA process overview
+policy-service-plan-claims: Service plan claims
+policy-serviceplans: Service plan coverage
+policy-shipping-address-changes: Shipping address changes
+policy-shipping-delays-weather: Weather-related shipping delays
+policy-shipping-estimates: Shipping estimates
+policy-shipping-international: International shipping considerations
+policy-shipping-restrictions: Shipping restrictions
+policy-shipping-signature: Signature-required deliveries
+policy-shipping: Shipping and delivery
+policy-support-hours: Support availability
+policy-warranty-transfer: Warranty transferability
+policy-warranty: Warranty coverage
+policy-wear-tear: Wear and tear exclusions
+setup-aetherlite-controls: Aether Lite — control overview
+setup-aetherlite-pairing: Aether Lite — Bluetooth pairing
+setup-aetherlite: Aether Lite — first-time setup
+setup-aetherx1-controls: Aether X1 — using onboard controls
+setup-aetherx1-fit: Aether X1 — adjusting fit
+setup-aetherx1: Aether X1 — initial setup and pairing
+setup-arcwebcam-positioning: Arc Webcam Pro — positioning and framing
+setup-arcwebcam: Arc Webcam Pro — setup guide
+setup-arcweblite-basic: Arc Webcam Lite — basic setup
+setup-arcweblite: Arc Webcam Lite — setup
+setup-echosmart-placement: Echo Smart Speaker — placement tips
+setup-echosmart: Echo Smart Speaker — initial setup
+setup-helios-viewfinder: Helios Pro — configuring viewfinder and display
+setup-heliosbatterygrip: Helios Pro Battery Grip — installation
+setup-heliosbatterygrip: Helios Pro Battery Grip — setup
+setup-helioscompact-video: Helios Compact — video setup
+setup-helioscompact: Helios Compact — getting started
+setup-heliospro-audio: Helios Pro — audio configuration
+setup-heliospro-video: Helios Pro — video recording setup
+setup-heliospro: Helios Pro — first-time setup
+setup-lumina24: Lumina 24 Creator — setup
+setup-lumina27-color: Lumina 27 Edge — color setup
+setup-lumina27: Lumina 27 Edge — gaming setup
+setup-lumina32-hdr: Lumina 32 — enabling HDR
+setup-lumina32-usb: Lumina 32 — USB-C and peripherals
+setup-lumina32: Lumina 32 — connecting and calibrating
+setup-luminamonitorarm-ergonomics: Lumina Monitor Arm — ergonomic adjustment
+setup-luminamonitorarm: Lumina Monitor Arm — installation
+setup-novaair: Nova Air — wireless setup
+setup-novamicro-bluetooth: Nova Micro — Bluetooth pairing
+setup-novamicro: Nova Micro — desktop setup
+setup-novastudio-placement: Nova Studio Speakers — placement guide
+setup-novastudio: Nova Studio Speakers — studio setup
+setup-orion-keycaps: Orion Keyboard — replacing keycaps
+setup-orionkeyboard: Orion Keyboard — setup and customization
+setup-orionmini-cleaning: Orion Mini — cleaning and care
+setup-orionmini-fn-guide: Orion Mini — function key guide
+setup-orionmini-layout: Orion Mini — understanding the layout
+setup-orionmini: Orion Mini — setup
+setup-orionsilent: Orion Silent — setup
+setup-pulseanc-case: Pulse ANC Earbuds — charging case setup
+setup-pulseanc-fitguide: Pulse ANC Earbuds — choosing ear tips
+setup-pulseanc-modes: Pulse ANC Earbuds — switching ANC modes
+setup-pulseanc: Pulse ANC Earbuds — initial setup
+setup-pulsesport: Pulse Sport Earbuds — setup
+trb-aetherlite-battery: Aether Lite — battery drains faster than expected
+trb-aetherlite-bluetooth-range: Aether Lite — limited Bluetooth range
+trb-aetherlite-controls: Aether Lite — onboard controls not responding
+trb-aetherlite-no-power: Aether Lite — headphones will not power on
+trb-aetherlite-pairing: Aether Lite — Bluetooth pairing fails
+trb-aetherx1-anc-calls: Aether X1 — ANC cuts out during calls
+trb-aetherx1-battery-percent: Aether X1 — battery percentage jumps unexpectedly
+trb-aetherx1-cable-no-audio: Aether X1 — no audio when using 3.5mm cable
+trb-aetherx1-left-right-balance: Aether X1 — left/right audio imbalance
+trb-aetherx1-mic-quality: Aether X1 — microphone quality is poor during calls
+trb-aetherx1-multipoint: Aether X1 — audio switches unexpectedly between devices
+trb-aetherx1-wired-anc: Aether X1 — ANC disabled in wired mode
+trb-arclite-focus: Arc Webcam Lite — focus does not adjust
+trb-arcwebcam-lowlight: Arc Webcam Pro — image appears soft in low light
+trb-arcwebcam-pro-freeze: Arc Webcam Pro — video freezes intermittently
+trb-arcweblite-audio: Arc Webcam Lite — microphone not detected
+trb-echosmart-voice: Echo Smart Speaker — voice commands not recognized
+trb-echosmart-volume: Echo Smart Speaker — volume changes unexpectedly
+trb-echosmart-wifi-drop: Echo Smart Speaker — Wi-Fi disconnects frequently
+trb-helios-batterygrip-charge: Helios Pro Battery Grip — batteries not charging
+trb-helios-storage-error: Helios Pro — memory card error
+trb-heliosbatterygrip-fit: Helios Pro Battery Grip — grip feels loose
+trb-helioscompact-battery-life: Helios Compact — shorter than expected battery life
+trb-helioscompact-flash: Helios Compact — flash not firing
+trb-helioscompact-focus: Helios Compact — images appear soft
+trb-helioscompact-power: Helios Compact — camera will not power on
+trb-helioscompact-shutter-delay: Helios Compact — shutter delay
+trb-helioscompact-storage: Helios Compact — storage fills quickly
+trb-helioscompact-video: Helios Compact — video recording stops unexpectedly
+trb-heliospro-audio-sync: Helios Pro — audio out of sync with video
+trb-heliospro-autofocus: Helios Pro — autofocus hunts or fails to lock
+trb-heliospro-firmware: Helios Pro — firmware update will not install
+trb-heliospro-overheat: Helios Pro — camera overheats during 8K recording
+trb-heliospro-rolling-shutter: Helios Pro — rolling shutter artifacts in video
+trb-heliospro-usb: Helios Pro — USB connection not recognized
+trb-heliospro-viewfinder: Helios Pro — viewfinder flickers
+trb-lumina24-color: Lumina 24 Creator — colors look inaccurate
+trb-lumina24-sleep: Lumina 24 Creator — monitor does not wake from sleep
+trb-lumina27-color-shift: Lumina 27 Edge — color shifts at angles
+trb-lumina27-ghosting: Lumina 27 Edge — motion ghosting
+trb-lumina27-hdr-washout: Lumina 27 Edge — HDR looks washed out
+trb-lumina27-refresh: Lumina 27 Edge — refresh rate option missing
+trb-lumina27-signal-loss: Lumina 27 Edge — signal drops at high refresh rates
+trb-lumina27-usb-hub: Lumina 27 Edge — USB hub not working
+trb-lumina32-audio-out: Lumina 32 — no audio from monitor speakers
+trb-lumina32-brightness: Lumina 32 — brightness appears uneven
+trb-lumina32-flicker: Lumina 32 — screen flickers intermittently
+trb-lumina32-hdr-banding: Lumina 32 — visible banding in HDR mode
+trb-lumina32-hdr-bright: Lumina 32 — HDR too bright or harsh
+trb-lumina32-scaling: Lumina 32 — text scaling appears blurry
+trb-lumina32-usbc: Lumina 32 — USB-C connection not detected
+trb-luminamonitorarm-sag: Lumina Monitor Arm — arm sags at full height
+trb-luminamonitorarm-tilt: Lumina Monitor Arm — tilt adjustment slips
+trb-novaair-dropouts: Nova Air — audio dropouts
+trb-novaair-firmware: Nova Air — firmware update fails
+trb-novaair-latency: Nova Air — noticeable audio latency with TV
+trb-novaair-multiroom: Nova Air — multi-room audio not syncing
+trb-novaair-network: Nova Air — cannot connect to Wi-Fi
+trb-novaair-power: Nova Air — speaker will not power on
+trb-novaair-volume-sync: Nova Air — volume not synced between speakers
+trb-novamicro-distortion: Nova Micro — distortion at high volume
+trb-novastudio-balance: Nova Studio Speakers — left/right balance mismatch
+trb-novastudio-clipping: Nova Studio Speakers — audio clipping
+trb-novastudio-heat: Nova Studio Speakers — enclosure feels warm
+trb-novastudio-hum: Nova Studio Speakers — humming noise
+trb-novastudio-no-sound: Nova Studio Speakers — no sound output
+trb-novastudio-pop: Nova Studio Speakers — popping sound on power on
+trb-novastudio-static: Nova Studio Speakers — static at low volume
+trb-orion-firmware: Orion Mechanical Keyboard — firmware update fails
+trb-orion-ghost-inputs: Orion Mechanical Keyboard — ghost inputs detected
+trb-orion-key-rattle: Orion Mechanical Keyboard — key rattle noise
+trb-orion-keycap: Orion Mechanical Keyboard — keycap feels loose
+trb-orion-keys: Orion Mechanical Keyboard — keys not registering
+trb-orionmini-backlight: Orion Mini — backlight turns off unexpectedly
+trb-orionmini-connection: Orion Mini — keyboard not recognized
+trb-orionmini-fn: Orion Mini — function key shortcuts not working
+trb-orionmini-layout: Orion Mini — missing arrow keys confusion
+trb-orionmini-repeat: Orion Mini — repeated key presses
+trb-orionmini-sticky: Orion Mini — keys feel sticky
+trb-orionsilent-backlight: Orion Silent — backlighting not turning on
+trb-orionsilent-keys: Orion Silent — keys feel inconsistent
+trb-orionsilent-noise: Orion Silent — audible ping during typing
+trb-orionsilent-usb: Orion Silent — USB disconnects intermittently
+trb-pulseanc-call-switch: Pulse ANC Earbuds — audio switches between call and media
+trb-pulseanc-case-led: Pulse ANC Earbuds — charging case LEDs not lighting
+trb-pulseanc-case: Pulse ANC Earbuds — charging case not charging earbuds
+trb-pulseanc-fit: Pulse ANC Earbuds — poor noise isolation
+trb-pulseanc-one-earbud: Pulse ANC Earbuds — one earbud drains faster
+trb-pulseanc-pairing: Pulse ANC Earbuds — earbuds pair independently
+trb-pulseanc-touch: Pulse ANC Earbuds — touch controls unresponsive
+trb-pulseanc-wind: Pulse ANC Earbuds — excessive wind noise outdoors
+trb-pulsesport-battery: Pulse Sport Earbuds — short battery life
+trb-pulsesport-fit: Pulse Sport Earbuds — ear hooks feel loose during activity
+trb-pulsesport-sweat: Pulse Sport Earbuds — moisture or sweat concerns
+trb-pulsesport-touch: Pulse Sport Earbuds — accidental touch inputs
+trb-pulsesport-wind-noise: Pulse Sport Earbuds — wind noise during runs
+
+================================================================================
+METADATA STATISTICS
+================================================================================
+
+AUDIENCE COUNTS:
+  agent: 27
+  customer: 189
+
+DOC_TYPE COUNTS:
+  macro: 20
+  policy: 28
+  setup: 45
+  sop: 16
+  tool_contract: 11
+  troubleshooting: 96
+
+CATEGORY COUNTS:
+  accessory: 16
+  camera: 21
+  headphone: 36
+  keyboard: 22
+  monitor: 21
+  null: 75
+  speaker: 25
+
+PRODUCT_ID COUNTS:
+  1: 10
+  2: 12
+  3: 10
+  4: 8
+  5: 7
+  6: 10
+  7: 9
+  8: 8
+  9: 12
+  10: 4
+  11: 8
+  12: 9
+  13: 3
+  14: 5
+  15: 3
+  16: 5
+  17: 4
+  18: 6
+  19: 4
+  20: 4
+  null: 75
+
+TAG COUNTS:
+  144hz: 1
+  60percent: 1
+  8k: 1
+  accessories: 1
+  address: 2
+  agent: 27
+  anc: 5
+  arm: 2
+  assistant: 1
+  audio: 8
+  autofocus: 1
+  backlight: 2
+  backorder: 1
+  balance: 2
+  banding: 1
+  battery: 9
+  battery-grip: 2
+  billing: 1
+  bluetooth: 7
+  brightness: 2
+  buttons: 1
+  calibration: 2
+  call-quality: 1
+  calls: 2
+  camera: 22
+  cancel: 1
+  capacity: 1
+  card: 1
+  case: 1
+  charging: 3
+  claims: 1
+  clarification: 1
+  clipping: 1
+  closure: 1
+  color: 4
+  confirmation: 1
+  connection: 2
+  contrast: 1
+  controls: 4
+  create_order: 1
+  damage: 1
+  data: 1
+  delay: 2
+  delivery: 1
+  disconnect: 2
+  display: 1
+  displayport: 2
+  distortion: 2
+  dpi: 1
+  draft_order: 1
+  dropout: 1
+  ear-tips: 1
+  earbuds: 15
+  earhooks: 1
+  ergonomics: 1
+  errors: 1
+  escalation: 3
+  estimate_shipping: 1
+  estimates: 1
+  exchange: 1
+  exclusions: 1
+  extended: 1
+  firmware: 3
+  fit: 6
+  flash: 1
+  flicker: 2
+  fn: 2
+  focus: 3
+  followup: 1
+  framing: 1
+  freeze: 1
+  gaming: 1
+  ghosting: 2
+  grip: 2
+  ground: 1
+  hdr: 4
+  headphones: 14
+  heat: 1
+  hours: 1
+  hub: 1
+  hum: 1
+  image: 1
+  imbalance: 1
+  initiate_return: 1
+  input: 1
+  inputs: 1
+  international: 1
+  inventory: 1
+  keyboard: 22
+  keycap: 1
+  keycaps: 1
+  keys: 5
+  knowledge-base: 1
+  lag: 1
+  latency: 1
+  layout: 2
+  led: 1
+  lighting: 3
+  limitation: 1
+  lowlight: 1
+  macro: 20
+  maintenance: 2
+  media: 1
+  microphone: 2
+  monitor: 22
+  monitor-arm: 2
+  motion: 1
+  mount: 1
+  multipoint: 2
+  multiroom: 1
+  network: 1
+  next-steps: 1
+  no-audio: 1
+  no-sound: 1
+  noise: 2
+  order_status: 1
+  orders: 7
+  overheat: 1
+  pairing: 3
+  panel: 1
+  partial: 1
+  payments: 1
+  percentage: 1
+  photos: 1
+  ping: 1
+  placement: 2
+  plans: 1
+  policy: 28
+  pop: 1
+  power: 4
+  privacy: 1
+  product_catalog: 1
+  products: 2
+  range: 1
+  rattle: 1
+  recording: 1
+  refresh: 1
+  refunds: 2
+  repeat: 1
+  replacement: 1
+  resolution: 1
+  restocking: 1
+  restrictions: 1
+  returns: 12
+  rma: 1
+  rolling-shutter: 1
+  rules: 1
+  runtime: 2
+  scaling: 1
+  search: 1
+  serial: 1
+  service: 1
+  service-plan: 1
+  settings: 1
+  setup: 45
+  sharpness: 1
+  shipping: 13
+  shortcuts: 1
+  shutter: 1
+  signal: 2
+  signature: 1
+  sleep: 1
+  smart: 1
+  smart-speaker: 3
+  sop: 15
+  speaker: 5
+  speakers: 14
+  sport: 6
+  static: 1
+  status: 1
+  stereo: 1
+  storage: 2
+  studio: 1
+  support: 2
+  sweat: 1
+  switching: 1
+  sync: 4
+  temperature: 1
+  tickets: 1
+  tilt: 1
+  tone: 1
+  tools: 11
+  touch: 2
+  transfer: 1
+  triage: 1
+  troubleshooting: 1
+  tv: 1
+  typing: 1
+  update: 4
+  usb: 4
+  usb-c: 2
+  video: 6
+  viewfinder: 2
+  viewing-angles: 1
+  voice: 1
+  volume: 3
+  warranty: 6
+  weather: 1
+  webcam: 8
+  welcome: 1
+  wifi: 2
+  wind: 2
+  window: 1
+  wired: 2
+  wireless: 6

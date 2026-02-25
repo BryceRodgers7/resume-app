@@ -66,7 +66,7 @@ Thumbs.db
 *.log
 
 # Output files
-qdrant/chunk_metadata.txt
+# qdrant/chunk_metadata.txt
 
 # Fly.io
 .fly/
