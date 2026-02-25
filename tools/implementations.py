@@ -24,7 +24,9 @@ class ToolImplementations:
         self.vector_store = vector_store or VectorStore()
     
     def draft_order(self, customer_name: Optional[str] = None, customer_email: Optional[str] = None,
-                   customer_phone: Optional[str] = None, shipping_address: Optional[str] = None,
+                   customer_phone: Optional[str] = None, street_address: Optional[str] = None,
+                   city: Optional[str] = None, state: Optional[str] = None,
+                   zip_code: Optional[str] = None,
                    product_ids: Optional[List[int]] = None, quantities: Optional[List[int]] = None) -> Dict[str, Any]:
         """Draft an order and validate all required information.
         
@@ -32,7 +34,10 @@ class ToolImplementations:
             customer_name: Customer name (optional)
             customer_email: Customer email (optional)
             customer_phone: Customer phone (optional)
-            shipping_address: Shipping address (optional)
+            street_address: Street address (optional)
+            city: City (optional)
+            state: State (optional)
+            zip_code: ZIP code (optional)
             product_ids: List of product IDs (optional)
             quantities: List of quantities (optional)
             
@@ -62,11 +67,26 @@ class ToolImplementations:
             else:
                 provided_fields["customer_phone"] = customer_phone
             
-            # Check shipping address
-            if not shipping_address:
-                missing_fields.append("shipping_address")
+            # Check address fields individually
+            if not street_address:
+                missing_fields.append("street_address")
             else:
-                provided_fields["shipping_address"] = shipping_address
+                provided_fields["street_address"] = street_address
+            
+            if not city:
+                missing_fields.append("city")
+            else:
+                provided_fields["city"] = city
+            
+            if not state:
+                missing_fields.append("state")
+            else:
+                provided_fields["state"] = state
+            
+            if not zip_code:
+                missing_fields.append("zip_code")
+            else:
+                provided_fields["zip_code"] = zip_code
             
             # Check product IDs and quantities
             if not product_ids or len(product_ids) == 0:
@@ -143,7 +163,10 @@ class ToolImplementations:
                     "customer_name": "customer's full name",
                     "customer_email": "customer's email address",
                     "customer_phone": "customer's phone number",
-                    "shipping_address": "shipping address",
+                    "street_address": "street address",
+                    "city": "city",
+                    "state": "state",
+                    "zip_code": "ZIP code",
                     "product_ids": "products to order",
                     "quantities": "quantities for products"
                 }
@@ -167,14 +190,18 @@ class ToolImplementations:
             }
     
     def create_order(self, customer_name: str, customer_email: str, customer_phone: str,
-                    shipping_address: str, product_ids: List[int], quantities: List[int]) -> Dict[str, Any]:
+                    street_address: str, city: str, state: str, zip_code: str,
+                    product_ids: List[int], quantities: List[int]) -> Dict[str, Any]:
         """Create a new order.
         
         Args:
             customer_name: Customer name
             customer_email: Customer email
             customer_phone: Customer phone
-            shipping_address: Shipping address
+            street_address: Street address
+            city: City
+            state: State
+            zip_code: ZIP code
             product_ids: List of product IDs
             quantities: List of quantities
             
@@ -194,7 +221,10 @@ class ToolImplementations:
                 customer_name=customer_name,
                 customer_email=customer_email,
                 customer_phone=customer_phone,
-                shipping_address=shipping_address,
+                street_address=street_address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
                 product_ids=product_ids,
                 quantities=quantities
             )

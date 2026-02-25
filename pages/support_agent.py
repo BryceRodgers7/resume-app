@@ -195,43 +195,41 @@ initialize_session_state()
 st.title("💬 Agentic Customer Support System")
 
 st.markdown("""
-### AI Customer Support Agent with Tool Calling & RAG
+### AI Support Agent with Structured Tool Execution & RAG
 
-This is a **fully functional customer support agent** for "Protis," a fictional e-commerce store. The system demonstrates 
-enterprise-grade agentic AI architecture with autonomous tool usage, database integration, and knowledge base retrieval.
+This demo showcases an agentic AI system built around structured execution and controlled tool access.  
+The agent analyzes user intent, selects appropriate tools, performs validated database operations and semantic retrieval, then synthesizes results into coherent responses — illustrating how LLMs can safely operate within real business systems.
 """)
 
 with st.expander("🎯 What This Demonstrates", expanded=False):
     st.markdown("""
-    - **Agentic Architecture**: Autonomous AI agent that decides which tools to use based on user intent
-    - **OpenAI Function Calling**: GPT-4 dynamically selects and executes tools from a library of 10+ functions
-    - **RAG (Retrieval Augmented Generation)**: Vector database integration for knowledge base retrieval
-    - **Multi-Database Architecture**: 
-      - **PostgreSQL** (Supabase): Transactional data (products, orders, returns, tickets)
-      - **Qdrant Vector DB**: Semantic search for SOPs, company policies, product troubleshooting and details
-    - **Tool-Based Design**: Extendable architecture with separate tool schemas and implementations
-    - **State Management**: Persistent conversation context and tool usage tracking
-    - **Real-World Business Logic**: Order management, returns processing, product search, and customer support workflows
+    - **Autonomous Tool Selection**: The agent determines when and how to call structured backend tools based on user intent.
+    - **LLM Function Calling (GPT-4)**: Dynamic selection and execution of 10+ tools using structured schemas.
+    - **Hybrid RAG Architecture**: Combines transactional data with vector-based semantic retrieval.
+    - **Multi-Database System Design**:
+      - PostgreSQL (Supabase) for orders, products, returns, and tickets
+      - Qdrant for knowledge base embeddings and semantic search
+    - **Stateful Conversations**: Persistent context and tool usage tracking across turns.
+    - **Extensible Tool Framework**: Modular tool schemas and implementations designed for expansion. View the tool code [here](https://github.com/BryceRodgers7/resume-app/tree/main/tools)
     """)
 
-with st.expander("🔧 Available Capabilities", expanded=False):
+with st.expander("🔧 Design & Capabilities", expanded=False):
     st.markdown("""    
-    The agent has access to 10+ tools including:
+    **Execution Flow:**
+    1. User message analyzed for intent
+    2. LLM selects appropriate tool(s)
+    3. Tool schemas and SOP context loaded and cached
+    4. Structured tool calls executed (SQL queries, vector search, etc.)
+    5. Results validated and synthesized into a final response
+    6. Execution metadata logged for inspection
+                
+    The agent has access to 9 different tools including:
     - **Order Management**: Draft, place, modify, track, and cancel orders
     - **Product Operations**: Search products by name, category, price range, or availability
     - **Knowledge Base**: Semantic search through company policies and procedures
     - **Support Tickets**: Create and manage customer support issues
     - **Returns Processing**: Initiate and track return requests
-    - **Shipping Calculations**: Get real-time shipping costs
-    - View all available tools in the sidebar →
-    
-    **Technical Flow:**
-    1. User sends a message
-    2. Agent analyzes intent and available tools
-    3. GPT-4 decides which tools to call via function calling
-    4. Tools execute (database queries, vector search, etc.)
-    5. Results synthesized into natural language response
-    6. Tool usage tracked in sidebar
+    - See the list of all available tools in the sidebar
     """)
 
 with st.expander("💡 Try These Interactions", expanded=False):
@@ -251,12 +249,13 @@ with st.expander("💡 Try These Interactions", expanded=False):
     - "How long does shipping take?"
     - "I need help with a defective product"
     
-    **Tip:** View the backend data for reference and see it change due to the agent's actions!
+    **Note:** These workflows are not hard-coded responses — the agent dynamically selects tools and executes real database operations. 
+    You can view the backend data for reference and see it change in real-time as the agent performs actions.
     """)
 
-st.info("""📊 **Behind the Scenes**: Click the 'Tools Used' expander within the responses to see the full execution details. 
+st.info("""📊 **Observability Built In**: Click the 'Tools Used' expander within the responses to see the full execution details. 
         Watch the sidebar to see how many tool calls total the agent has used. 
-        View the backend data for reference and see it change due to the agent's actions!
+        View the backend data for reference by clicking the 'View All Data Tables' button below, and see it change due to the agent's actions!
         """)
 
 st.caption("Powered by OpenAI GPT-4 with function calling | PostgreSQL (Supabase) | Qdrant Vector Database")

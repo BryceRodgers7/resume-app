@@ -22,9 +22,21 @@ TOOL_SCHEMAS = [
                         "type": "string",
                         "description": "Phone number of the customer (if provided)"
                     },
-                    "shipping_address": {
+                    "street_address": {
                         "type": "string",
-                        "description": "Complete shipping address including street, city, state, and ZIP (if provided)"
+                        "description": "Street address including house/building number and street name (if provided)"
+                    },
+                    "city": {
+                        "type": "string",
+                        "description": "City name (if provided)"
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "State name or abbreviation (if provided)"
+                    },
+                    "zip_code": {
+                        "type": "string",
+                        "description": "ZIP or postal code (if provided)"
                     },
                     "product_ids": {
                         "type": "array",
@@ -61,9 +73,21 @@ TOOL_SCHEMAS = [
                         "type": "string",
                         "description": "Phone number of the customer"
                     },
-                    "shipping_address": {
+                    "street_address": {
                         "type": "string",
-                        "description": "Complete shipping address including street, city, state, and ZIP"
+                        "description": "Street address including house/building number and street name"
+                    },
+                    "city": {
+                        "type": "string",
+                        "description": "City name"
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "State name or abbreviation"
+                    },
+                    "zip_code": {
+                        "type": "string",
+                        "description": "ZIP or postal code"
                     },
                     "product_ids": {
                         "type": "array",
@@ -76,7 +100,7 @@ TOOL_SCHEMAS = [
                         "description": "List of quantities for each product (must match length of product_ids)"
                     }
                 },
-                "required": ["customer_name", "customer_email", "customer_phone", "shipping_address", "product_ids", "quantities"]
+                "required": ["customer_name", "customer_email", "customer_phone", "street_address", "city", "state", "zip_code", "product_ids", "quantities"]
             }
         }
     },

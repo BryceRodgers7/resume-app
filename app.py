@@ -104,28 +104,24 @@ def home_page():
         """)
 
     with col2:
-        st.markdown("### 🔧 Technologies Used")
-        tech_col1, tech_col2 = st.columns(2)
+        st.markdown("### 🔧 Technologies Used Here")
         
-        with tech_col1:
-            st.markdown("""
-            - Python 
-            - Streamlit
-            - Docker
-            - PostgreSQL
-            - Qdrant
-            - Google Cloud Run
-            """)
-        
-        with tech_col2:
-            st.markdown("""
-            - PyTorch
-            - Transformers
-            - Stability AI API
-            - OpenAI API
-            - Fly.io
-            - Custom ML Models
-            """)
+        st.markdown("""
+        - Python 
+        - Streamlit
+        - Docker
+        - PostgreSQL
+        - Qdrant
+        - Google Cloud Run/Storage
+        - Cursor IDE
+        - PyTorch
+        - NumPy
+        - FastAPI
+        - Transformers
+        - Stability AI API
+        - OpenAI API
+        - Fly.io
+        """)
 
     st.markdown("---")
 

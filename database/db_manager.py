@@ -199,14 +199,18 @@ class DatabaseManager:
     
     # Order operations
     def create_order(self, customer_name: str, customer_email: str, customer_phone: str,
-                    shipping_address: str, product_ids: List[int], quantities: List[int]) -> int:
+                    street_address: str, city: str, state: str, zip_code: str,
+                    product_ids: List[int], quantities: List[int]) -> int:
         """Create a new order.
         
         Args:
             customer_name: Customer name
             customer_email: Customer email
             customer_phone: Customer phone
-            shipping_address: Shipping address
+            street_address: Street address
+            city: City
+            state: State
+            zip_code: ZIP code
             product_ids: List of product IDs
             quantities: List of quantities for each product
             
@@ -233,10 +237,10 @@ class DatabaseManager:
                             logger.info(f"create_order: Retrieved price ${price} for product_id={product_id}")
                     
                     # Create order
-                    query = """INSERT INTO agent_orders (customer_name, customer_email, customer_phone, 
-                           shipping_address, total_amount, status) 
-                           VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id"""
-                    params = (customer_name, customer_email, customer_phone, shipping_address, total_amount)
+                    query = """INSERT INTO agent_orders (customer_name, customer_email, customer_phone,
+                           street_address, city, state, zip_code, total_amount, status)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending') RETURNING id"""
+                    params = (customer_name, customer_email, customer_phone, street_address, city, state, zip_code, total_amount)
                     self._log_query(query, params)
                     cursor.execute(query, params)
                     order_id = cursor.fetchone()['id']
@@ -279,7 +283,7 @@ class DatabaseManager:
                 with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
                     # Get order with actual columns
                     query = """SELECT id as order_id, customer_name, customer_email, customer_phone,
-                                  shipping_address, zip_code, city, state,
+                                  street_address, zip_code, city, state,
                                   status, total_amount, created_at, updated_at 
                            FROM agent_orders WHERE id = %s"""
                     params = (order_id,)
@@ -323,7 +327,7 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
                     query = """SELECT id as order_id, customer_name, customer_email, customer_phone,
-                                      shipping_address, zip_code, city, state,
+                                      street_address, zip_code, city, state,
                                       status, total_amount, created_at, updated_at 
                                FROM agent_orders WHERE 1=1"""
                     params = []
