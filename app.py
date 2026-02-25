@@ -94,6 +94,9 @@ def home_page():
 
     - **Text-to-Image Generation Service**  
     Stability AI integration with serverless backend and frontend orchestration
+                    
+    - **Interactive Prompt Engineering Sandbox**  
+    Real-time streaming chatbot with dynamic system prompt control demonstrating OpenAI API integration and LLM behavior modulation
 
     - **System Architecture Overview**  
     Full-stack serverless infrastructure diagram covering frontend, API services, vector database, model hosting, and data storage
