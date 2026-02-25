@@ -61,7 +61,7 @@ def home_page():
     <p style="font-size: 16px;">
     I am a Senior Software Engineer and Applied Machine Learning Engineer with more than 15 years of experience building scalable backend systems, developer tooling, and data-driven applications. I specialize in full-stack AI systems, serverless architecture, and modern cloud infrastructure, with a focus on taking ideas from model training to production deployment.
 
-    I’ve shipped large production systems at companies like Pearson and Samsung, designing reliable software used by millions of people. I hold a U.S. patent (US9299264B2 — Sound Assessment and Remediation) and have an academic foundation in Mathematics, Statistics, Computer Science, and Business Administration. That background shapes how I approach engineering decisions — balancing technical rigor, practical outcomes, and long-term system design.
+    I’ve shipped large production systems at companies like Pearson and Samsung, designing reliable software used by millions of people. I hold a U.S. patent (US9299264B2 — Sound Assessment and Remediation) and have an academic foundation in Mathematics, Computer Science, and Business Administration. That background shapes how I approach engineering decisions — balancing technical rigor, practical outcomes, and long-term system design.
 
     In recent years, my work has centered on AI-driven applications and cloud-native ML workflows. This portfolio highlights deployed projects spanning computer vision, large language models, retrieval-augmented generation, and document intelligence systems. Each project demonstrates end-to-end implementation — from data pipelines and model training to cloud-hosted inference services and scalable backend architecture.
 
