@@ -275,13 +275,17 @@ class ToolImplementations:
                 "error": str(e)
             }
     
-    def product_catalog(self, category: Optional[str] = None, 
-                       search_query: Optional[str] = None) -> Dict[str, Any]:
+    def product_catalog(self, category: Optional[str] = None,
+                       search_query: Optional[str] = None,
+                       price: Optional[float] = None,
+                       price_operator: Optional[str] = None) -> Dict[str, Any]:
         """Get product catalog.
         
         Args:
             category: Filter by category
             search_query: Search query
+            price: Price value to filter by
+            price_operator: Comparison operator ('gt', 'lt', 'eq')
             
         Returns:
             Result dictionary with products
@@ -293,9 +297,19 @@ class ToolImplementations:
                 # Convert plural to singular
                 if category.endswith('s') and category not in ['accessories']:
                     category = category[:-1]  # Remove trailing 's'
-            
-            products = self.db.get_products(category=category, search_query=search_query)
-            
+
+            # Validate price_operator when price is provided
+            valid_operators = {"gt", "lt", "eq"}
+            if price is not None and price_operator not in valid_operators:
+                price_operator = "eq"
+
+            products = self.db.search_product_catalog(
+                category=category,
+                search_query=search_query,
+                price=price,
+                price_operator=price_operator
+            )
+
             return {
                 "success": True,
                 "count": len(products),

@@ -125,7 +125,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "product_catalog",
-            "description": "Browse the product catalog with optional filtering by category or search query",
+            "description": "Browse the product catalog with optional filtering by category, search query, and price",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -136,6 +136,15 @@ TOOL_SCHEMAS = [
                     "search_query": {
                         "type": "string",
                         "description": "Search products by name or description"
+                    },
+                    "price": {
+                        "type": "number",
+                        "description": "Price value to filter by (used together with price_operator)"
+                    },
+                    "price_operator": {
+                        "type": "string",
+                        "enum": ["gt", "lt", "eq"],
+                        "description": "Comparison operator for price filter: 'gt' = greater than, 'lt' = less than, 'eq' = equal to"
                     }
                 },
                 "required": []

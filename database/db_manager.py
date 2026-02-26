@@ -128,6 +128,56 @@ class DatabaseManager:
             logger.error(f"Error in get_products: {str(e)}", exc_info=True)
             raise
     
+    def search_product_catalog(self, category: Optional[str] = None, search_query: Optional[str] = None,
+                               price: Optional[float] = None, price_operator: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Search product catalog with optional filtering by category, text, and price.
+
+        Similar to get_products but also supports price filtering via a comparison operator.
+
+        Args:
+            category: Filter by category
+            search_query: Search in name, description, and specifications
+            price: Price value to compare against
+            price_operator: Comparison operator — 'gt' (greater than), 'lt' (less than), 'eq' (equal to)
+
+        Returns:
+            List of product dictionaries
+        """
+        _op_map = {"gt": ">", "lt": "<", "eq": "="}
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
+                    query = "SELECT * FROM agent_products WHERE 1=1"
+                    params = []
+
+                    if category:
+                        query += " AND LOWER(category) = LOWER(%s)"
+                        params.append(category)
+
+                    if search_query:
+                        query += " AND (name ILIKE %s OR description ILIKE %s OR specifications ILIKE %s)"
+                        params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
+
+                    if price is not None:
+                        op = _op_map.get(price_operator or "eq", "=")
+                        query += f" AND price {op} %s"
+                        params.append(price)
+
+                    query += " ORDER BY name"
+
+                    self._log_query(query, params)
+                    cursor.execute(query, params)
+                    results = [self._prepare_for_json(dict(row)) for row in cursor.fetchall()]
+                    logger.info(
+                        f"search_product_catalog returned {len(results)} products "
+                        f"(category={category}, search_query={search_query}, price={price_operator} {price})"
+                    )
+                    return results
+        except Exception as e:
+            logger.error(f"Error in search_product_catalog: {str(e)}", exc_info=True)
+            raise
+
     def get_product_by_id(self, product_id: int) -> Optional[Dict[str, Any]]:
         """Get a single product by ID.
         
