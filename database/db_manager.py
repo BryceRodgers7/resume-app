@@ -314,6 +314,53 @@ class DatabaseManager:
             logger.error(f"Error in get_order for order_id={order_id}: {str(e)}", exc_info=True)
             raise
     
+    def get_order_with_product_names(self, order_id: int) -> Optional[Dict[str, Any]]:
+        """Get order details with product names resolved from agent_products.
+
+        Similar to get_order but joins agent_products to replace product_id
+        with the product name. Items do not include order_item_id or product_id.
+
+        Args:
+            order_id: Order ID
+
+        Returns:
+            Order dictionary with named items or None
+        """
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
+                    query = """SELECT id as order_id, customer_name, customer_email, customer_phone,
+                                  street_address, zip_code, city, state,
+                                  status, total_amount, created_at, updated_at
+                           FROM agent_orders WHERE id = %s"""
+                    params = (order_id,)
+                    self._log_query(query, params)
+                    cursor.execute(query, params)
+                    order_row = cursor.fetchone()
+
+                    if not order_row:
+                        logger.info(f"get_order_with_product_names: No order found for order_id={order_id}")
+                        return None
+
+                    order = dict(order_row)
+                    logger.info(f"get_order_with_product_names: Retrieved order_id={order_id}, status={order.get('status')}")
+
+                    query = """SELECT p.name as product_name,
+                                  oi.quantity, oi.price_at_purchase
+                           FROM agent_order_items oi
+                           JOIN agent_products p ON oi.product_id = p.id
+                           WHERE oi.order_id = %s"""
+                    params = (order_id,)
+                    self._log_query(query, params)
+                    cursor.execute(query, params)
+                    order['items'] = [self._prepare_for_json(dict(row)) for row in cursor.fetchall()]
+                    logger.info(f"get_order_with_product_names: Retrieved {len(order['items'])} items for order_id={order_id}")
+
+                    return self._prepare_for_json(order)
+        except Exception as e:
+            logger.error(f"Error in get_order_with_product_names for order_id={order_id}: {str(e)}", exc_info=True)
+            raise
+
     def get_orders(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get orders with optional status filter.
         

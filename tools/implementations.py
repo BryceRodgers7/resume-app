@@ -254,7 +254,7 @@ class ToolImplementations:
             Result dictionary with order status
         """
         try:
-            order = self.db.get_order(order_id)
+            order = self.db.get_order_with_product_names(order_id)
             
             if not order:
                 return {
