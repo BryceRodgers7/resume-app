@@ -131,7 +131,8 @@ TOOL_SCHEMAS = [
                 "properties": {
                     "category": {
                         "type": "string",
-                        "description": "Filter products by category (e.g., electronics, clothing, home)"
+                        "enum": ["accessory", "camera", "headphone", "keyboard", "monitor", "speaker"],
+                        "description": "Filter products by category"
                     },
                     "search_query": {
                         "type": "string",
