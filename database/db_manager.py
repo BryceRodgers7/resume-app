@@ -156,8 +156,14 @@ class DatabaseManager:
                         params.append(category)
 
                     if search_query:
-                        query += " AND (name ILIKE %s OR description ILIKE %s OR specifications ILIKE %s)"
-                        params.extend([f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"])
+                        words = search_query.split()
+                        word_clauses = " OR ".join(
+                            "(name ILIKE %s OR description ILIKE %s OR specifications ILIKE %s)"
+                            for _ in words
+                        )
+                        query += f" AND ({word_clauses})"
+                        for word in words:
+                            params.extend([f"%{word}%", f"%{word}%", f"%{word}%"])
 
                     if price is not None:
                         op = _op_map.get(price_operator or "eq", "=")
