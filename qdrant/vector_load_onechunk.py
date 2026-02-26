@@ -11,7 +11,7 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 COLLECTION_NAME = "knowledge_base"
 
 # Specify the chunk ID to load — pass as CLI arg or hard-code as fallback
-CHUNK_ID = sys.argv[1] if len(sys.argv) > 1 else "agent-sop-create-order"
+CHUNK_ID = sys.argv[1] if len(sys.argv) > 1 else "agent-sop-draft-order"
 
 # Load chunks from JSON
 chunks_path = os.path.join(os.path.dirname(__file__), "chunks.json")

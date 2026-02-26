@@ -483,19 +483,21 @@ class ToolImplementations:
             
             # Build a descriptive message
             if product_ids:
-                # Get product names for the message
-                order_product_map = {item['product_id']: item for item in order.get('items', [])}
-                returned_items = []
-                for pid, qty in zip(product_ids, quantities):
-                    if pid in order_product_map:
-                        product_name = order_product_map[pid]['product_name']
-                        returned_items.append(f"{qty}x {product_name}")
+                # Get product info for the message using return_info items
+                returned_items = [
+                    f"{item['quantity']}x Product {item['product_id']}"
+                    for item in return_info.get('items', [])
+                ]
                 items_text = ", ".join(returned_items)
                 message = f"Return request #{return_id} created for {items_text} from order #{order_id}. Refund amount: ${return_info['refund_total_amount']}"
             else:
-                # For full order return, return all items
-                items_text = ", ".join([f"{item['product_name']} x {item['quantity']}" for item in order.get('items', [])])
-                message = f"Return request #{return_id} created for entire order #{order_id}. Refund amount: ${return_info['refund_total_amount']}"
+                # Full order return — all items included
+                returned_items = [
+                    f"{item['quantity']}x Product {item['product_id']}"
+                    for item in return_info.get('items', [])
+                ]
+                items_text = ", ".join(returned_items)
+                message = f"Return request #{return_id} created for entire order #{order_id} ({items_text}). Refund amount: ${return_info['refund_total_amount']}"
             
             logger.info(f"initiate_return: {message}")
             
