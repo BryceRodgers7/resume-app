@@ -237,12 +237,12 @@ with st.expander("💡 Try These Interactions", expanded=False):
     **Order Management:**
     - "I want to order 2 wireless headphones and have them shipped to New York"
     - "I need to cancel order number xyz" (pick one from the list of existing orders)
-    - "Track the status of my recent order"
+    - "Track the status of my recent order #51"
     
     **Product Search:**
     - "Show me computer monitors under $500"
     - "What wireless headphones do you have in stock?"
-    - "Find me smartphones with at least 128GB storage"
+    - "Do you carry any bluetooth speakers, or headphones?"
     
     **Policies & Support:**
     - "What's your return policy?"
