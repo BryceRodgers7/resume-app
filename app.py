@@ -29,7 +29,7 @@ def home_page():
 
     photo_path = Path(__file__).parent / '.static' / 'me.jpg'
     # display my photo (convert Path to string for Streamlit compatibility)
-    st.image(str(photo_path), width=231, caption="Bryce Rodgers")
+    st.image(str(photo_path), width=1024, caption="Bryce Rodgers")
 
     st.markdown("""
         <style>
