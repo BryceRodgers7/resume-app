@@ -377,7 +377,7 @@ if st.button("🔤 Load Vocabulary", use_container_width=True):
     else:
         with st.spinner("Loading vocabulary..."):
             try:
-                response = requests.get(f"{API_URL}/vocab", timeout=20)
+                response = requests.get(f"{API_URL}/vocab/{model}", timeout=20)
                 
                 if response.status_code == 200:
                     vocab_data = response.json()
