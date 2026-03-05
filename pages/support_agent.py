@@ -255,7 +255,7 @@ with st.expander("💡 Try These Interactions", expanded=False):
 
 st.info("""📊 **Observability Built In**: Click the 'Tools Used' expander within the responses to see the full execution details. 
         Watch the sidebar to see how many tool calls total the agent has used. 
-        View the backend data for reference by clicking the 'View All Data Tables' button below, and see it change due to the agent's actions!
+        View the backend data for reference by clicking the 'View Product and Order Data' button below, and see it change due to the agent's actions!
         """)
 
 st.caption("Powered by OpenAI GPT-4 with function calling | PostgreSQL (Supabase) | Qdrant Vector Database")
@@ -285,7 +285,7 @@ with col2:
                 font-size: 0.9rem;
                 font-weight: 500;
             ">
-                📊 View All Data Tables
+                📊 View Product and Order Data
             </button>
         </div>
     """, height=50)
