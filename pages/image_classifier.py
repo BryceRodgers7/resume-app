@@ -53,9 +53,9 @@ with st.expander("🔍 Training Pipeline", expanded=False):
     5) Retrain (from scratch, 15 epochs)
     6) Hard-negative mining
     7) Train again with mined images (fine-tune, 2 epochs)
-    8) Temperature calibration
-    9) Choose confidence threshold (currently at this step)
-    10) Final evaluation on challenge set (coming soon!)
+    8) Temperature calibration (~1.60)
+    9) Choose confidence threshold (0.85)
+    10) Final evaluation on challenge set (loss 0.157, accuracy 0.968)
                 
     **Training Specifications:**
     - Batch processing with GPU optimization
