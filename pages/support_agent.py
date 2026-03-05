@@ -236,7 +236,7 @@ with st.expander("💡 Try These Interactions", expanded=False):
     st.markdown("""
     **Order Management:**
     - "I want to order 2 wireless headphones and have them shipped to New York"
-    - "I need to cancel order number xyz" (pick one from the list of existing orders)
+    - "Tell me about the Lumina 4k monitor"
     - "Track the status of my recent order #51"
     
     **Product Search:**
