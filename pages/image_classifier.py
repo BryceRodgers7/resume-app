@@ -45,7 +45,7 @@ with st.expander("🔧 Technical Architecture", expanded=False):
 
 with st.expander("🔍 Training Pipeline", expanded=False):
     st.markdown("""
-    **Training Plan**
+    **Training & Validation Procedure**
     1) Collect initial dataset
     2) Remove duplicates using pHash
     3) Train model (just the head, 3 epochs)
@@ -57,7 +57,7 @@ with st.expander("🔍 Training Pipeline", expanded=False):
     9) Choose confidence threshold (0.85)
     10) Final evaluation on challenge set (loss 0.157, accuracy 0.968)
                 
-    **Training Specifications:**
+    **Model Specifications:**
     - Batch processing with GPU optimization
     - Data augmentation (resize, crop, random flips, color jitter)
     - Transfer learning with frozen early layers
