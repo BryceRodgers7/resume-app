@@ -186,12 +186,12 @@ if uploaded_file:
                 
                 # Determine detection reason
                 if threshold_applied:
-                    detection_reason = 'high_entropy'
+                    detection_reason = 'low_confidence_threshold'
                 elif predicted_class == 'other':
                     detection_reason = 'predicted_other'
                 else:
                     detection_reason = 'confident_prediction'
-                
+
                 # Display result with emoji
                 emoji_map = {
                     'bird': '🐦',
@@ -215,9 +215,9 @@ if uploaded_file:
                 
                 # Progress bar for confidence
                 st.progress(confidence)
-                
+
                 # Show detection reasoning
-                entropy_threshold = 0.7  # Default threshold for display
+                entropy_threshold = 0.85  # Default threshold for display
                 if detection_reason == 'high_entropy':
                     st.warning(f"⚠️ **High Uncertainty Detected** (entropy: {normalized_entropy:.3f} > {entropy_threshold:.2f})")
                     st.caption("The model's predictions are spread across multiple classes, indicating this image doesn't clearly match any trained category.")
