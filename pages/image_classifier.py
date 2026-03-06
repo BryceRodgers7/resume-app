@@ -4,9 +4,13 @@ import requests
 import json
 import os
 import math
+import logging
 from io import BytesIO
 import nav
 from app import home_page
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
@@ -172,11 +176,24 @@ if uploaded_file:
                     st.error(f"❌ {error}")
                     st.stop()
                 
+                # Log full API response
+                logger.info("API response received: %s", json.dumps(result, indent=2))
+
                 # Extract results from API response
                 predicted_class = result['predicted_class']
                 confidence = result['confidence']
-                all_probs = result['probabilities']
+                top_class = result['top_class']
+                top_prob = result['top_prob']
+                confidence_threshold = result['confidence_threshold']
+                all_probs = result['all_probs']
                 threshold_applied = result.get('threshold_applied', False)
+
+                logger.info(
+                    "Parsed — predicted_class=%s, confidence=%.4f, top_class=%s, top_prob=%.4f, "
+                    "confidence_threshold=%.4f, threshold_applied=%s, all_probs=%s",
+                    predicted_class, confidence, top_class, top_prob,
+                    confidence_threshold, threshold_applied, all_probs
+                )
                 
                 # Calculate entropy from probabilities for display purposes
                 prob_values = list(all_probs.values())
@@ -217,14 +234,14 @@ if uploaded_file:
                 st.progress(confidence)
 
                 # Show detection reasoning
-                entropy_threshold = 0.85  # Default threshold for display
                 if detection_reason == 'high_entropy':
-                    st.warning(f"⚠️ **High Uncertainty Detected** (entropy: {normalized_entropy:.3f} > {entropy_threshold:.2f})")
+                    st.warning(f"⚠️ **High Uncertainty Detected** (entropy: {normalized_entropy:.3f})")
                     st.caption("The model's predictions are spread across multiple classes, indicating this image doesn't clearly match any trained category.")
-                elif detection_reason == 'predicted_other':
-                    st.info("📦 **Classified as 'Other'** - The model learned this doesn't match bird/plane/superman patterns")
+                elif detection_reason == 'low_confidence_threshold':
+                    st.warning(f"⚠️ **Below Confidence Threshold** (confidence: {confidence:.4f} < threshold: {confidence_threshold:.4f})")
+                    st.caption("The model's top prediction did not meet the required confidence threshold and was overridden.")
                 else:
-                    st.success(f"✅ **Confident Prediction** (entropy: {normalized_entropy:.3f} ≤ {entropy_threshold:.2f})")
+                    st.success(f"✅ **Confident Prediction** (confidence: {confidence:.4f} ≥ threshold: {confidence_threshold:.4f})")
                 
                 # Show all class probabilities
                 st.markdown("### 📊 Confidence Breakdown:")
@@ -237,8 +254,13 @@ if uploaded_file:
                 with st.expander("🔬 Technical Details"):
                     st.markdown(f"""
                     **Prediction Metrics:**
-                    - **Max Confidence**: {confidence * 100:.2f}%
-                    - **Normalized Entropy**: {normalized_entropy:.4f} (threshold: {entropy_threshold:.2f})
+                    - **Predicted Class**: {predicted_class}
+                    - **Confidence**: {confidence:.4f} ({confidence * 100:.2f}%)
+                    - **Top Class (raw)**: {top_class}
+                    - **Top Probability (raw)**: {top_prob:.4f} ({top_prob * 100:.2f}%)
+                    - **Confidence Threshold**: {confidence_threshold:.4f}
+                    - **Threshold Applied**: {threshold_applied}
+                    - **Normalized Entropy**: {normalized_entropy:.4f}
                     - **Detection Method**: {detection_reason.replace('_', ' ').title()}
                     
                     **Entropy Interpretation:**
@@ -246,8 +268,10 @@ if uploaded_file:
                     - Entropy near 0.5 = Moderate uncertainty
                     - Entropy near 1.0 = Very uncertain (probabilities spread evenly)
                     
-                    **Current Distribution:**
+                    **Raw API Response:**
                     """)
+                    st.json(result)
+                    st.markdown("**Current Distribution:**")
                     
                     # Show if distribution is uniform or peaked
                     prob_values_list = list(all_probs.values())
@@ -268,6 +292,6 @@ if uploaded_file:
                 elif predicted_class == 'plane':
                     st.info("✈️ It's a plane! Ready for takeoff!")
                 else:
-                    st.info("📦 This image doesn't clearly match any of the trained categories (bird/plane/superman)")
+                    st.info("📦 This image doesn't clearly match any of the specific categories (bird/plane/superman)")
 
 
