@@ -26,7 +26,7 @@ st.markdown("""
 
 These are **custom-built GPT (Generative Pre-trained Transformer)** models with 10 million parameters that I wrote myself using PyTorch.\n
 Choose between **Shakespeare** (trained on Shakespeare's works) or **Voyager** (trained on Star Trek Voyager scripts).
-This demonstrates understanding of transformer architecture, model training pipelines, and cloud deployment of multiple ML models.
+This showcases understanding of transformer architecture, model training pipelines, and cloud deployment of multiple ML models.
 """)
 
 with st.expander("🎯 What This Demonstrates", expanded=False):

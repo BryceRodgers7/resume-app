@@ -27,7 +27,7 @@ st.title("🖼️ Is It a Bird? Is It a Plane? 🦸")
 st.markdown("""
 ### Custom Image Classifier with Transfer Learning & Entropy-Based Uncertainty Detection
 
-This is a **custom-trained image classification model** built with PyTorch using transfer learning. The model demonstrates 
+This is a **custom-trained image classification model** built with PyTorch using transfer learning. This page showcases 
 practical computer vision implementation, including training pipeline design, entropy-based out-of-distribution detection, and production-ready inference.
 """)
 
@@ -57,10 +57,10 @@ with st.expander("🔍 Training Pipeline", expanded=False):
     4) Early-loss clean mislabeled data
     5) Retrain (from scratch, 15 epochs)
     6) Hard-negative mining
-    7) Train again with mined images (fine-tune, 2 epochs)
+    7) Train again with mined images (4 epochs, lower LR)
     8) Temperature calibration (~1.60)
-    9) Choose confidence threshold (0.85)
-    10) Final evaluation on challenge set (loss 0.157, accuracy 0.968)
+    9) Choose confidence threshold (0.7)
+    10) Final evaluation on validation set (loss 0.102, accuracy 0.978)
                 
     **Model Specifications:**
     - Batch processing with GPU optimization
@@ -88,7 +88,6 @@ with st.expander("💡 Try it Out", expanded=False):
     **What to Expect:**
     - Images clearly matching a category → Low entropy, high confidence
     - Ambiguous/unfamiliar images → High entropy, classified as "other"
-    - The model now has **two layers of protection** against false positives
     """)
 
 st.info("🧠 **Model Training Code**: Check out the complete training pipeline code on [GitHub →](https://github.com/BryceRodgers7/img-classifier-birdplanesuper)!")

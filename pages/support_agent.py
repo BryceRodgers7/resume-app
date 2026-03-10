@@ -197,7 +197,7 @@ st.title("💬 Agentic Customer Support System")
 st.markdown("""
 ### AI Support Agent with Structured Tool Execution & RAG
 
-This demo showcases an agentic AI system built around structured execution and controlled tool access.  
+This page showcases an agentic AI system built around structured execution and controlled tool access.  
 The agent analyzes user intent, selects appropriate tools, performs validated database operations and semantic retrieval, then synthesizes results into coherent responses — illustrating how LLMs can safely operate within real business systems.
 """)
 
@@ -205,10 +205,10 @@ with st.expander("🎯 What This Demonstrates", expanded=False):
     st.markdown("""
     - **Autonomous Tool Selection**: The agent determines when and how to call structured backend tools based on user intent.
     - **LLM Function Calling (GPT-4)**: Dynamic selection and execution of 10+ tools using structured schemas.
-    - **Hybrid RAG Architecture**: Combines transactional data with vector-based semantic retrieval.
     - **Multi-Database System Design**:
       - PostgreSQL (Supabase) for orders, products, returns, and tickets
       - Qdrant for knowledge base embeddings and semantic search
+    - **Hybrid RAG Architecture**: Combines transactional data with vector-based semantic retrieval.
     - **Stateful Conversations**: Persistent context and tool usage tracking across turns.
     - **Extensible Tool Framework**: Modular tool schemas and implementations designed for expansion. View the tool code [here](https://github.com/BryceRodgers7/resume-app/tree/main/tools)
     """)
@@ -229,7 +229,7 @@ with st.expander("🔧 Design & Capabilities", expanded=False):
     - **Knowledge Base**: Semantic search through company policies and procedures
     - **Support Tickets**: Create and manage customer support issues
     - **Returns Processing**: Initiate and track return requests
-    - See the list of all available tools in the sidebar
+    - See the full list of available tools in the sidebar
     """)
 
 with st.expander("💡 Try These Interactions", expanded=False):
@@ -253,9 +253,9 @@ with st.expander("💡 Try These Interactions", expanded=False):
     You can view the backend data for reference and see it change in real-time as the agent performs actions.
     """)
 
-st.info("""📊 **Observability Built In**: Click the 'Tools Used' expander within the responses to see the full execution details. 
-        Watch the sidebar to see how many tool calls total the agent has used. 
-        View the backend data for reference by clicking the 'View Product and Order Data' button below, and see it change due to the agent's actions!
+st.info("""📊 **Observability Built In**: During conversation, click the 'Tools Used' expander within the responses to see the full execution details. 
+        Watch the sidebar to see how many tool calls the agent has used in total during the conversation. 
+        View the backend data for reference by clicking the 'View Product and Order Data' button below, and watch it change due to the agent's actions during the conversation!
         """)
 
 st.caption("Powered by OpenAI GPT-4 with function calling | PostgreSQL (Supabase) | Qdrant Vector Database")
