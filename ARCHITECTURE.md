@@ -7,99 +7,113 @@ This diagram shows the complete **serverless/cloud-native** architecture of the 
 All components are hosted on managed cloud services with automatic scaling and no server management required.
 
 ```mermaid
+---
+config:
+  layout: dagre
+---
 flowchart TB
-    subgraph User["👤 User Layer"]
-        BROWSER[User Browser]
-    end
-
-    subgraph FlyIO["☁️ Fly.io - Frontend Hosting"]
-        subgraph Frontend["Streamlit Frontend Container"]
-            MAIN[Main Page<br/>app.py]
-            
-            subgraph Pages["Application Pages"]
-                CS[Customer Support<br/>customer_support.py]
-                PC[Pirate Chatbot<br/>pirate_chatbot.py]
-                GPT[Custom GPT Model<br/>gpt_model.py]
-                IC[Image Classifier<br/>image_classifier.py]
-                STAB[Text-to-Image<br/>stability.py]
-                ADV[Data Views<br/>All_Data_Views.py]
-            end
-        end
-
-        subgraph AgenticSystem["Agentic Support System"]
-            AGENT[Customer Support Agent<br/>chatbot/agent.py]
-            PROMPTS[System Prompts<br/>chatbot/prompts.py]
-            
-            subgraph Tools["Tool Layer"]
-                TSCHEMA[Tool Schemas<br/>tools/schemas.py]
-                TIMPL[Tool Implementations<br/>tools/implementations.py]
-            end
-        end
-
-        subgraph MLLayer["ML Layer"]
-            MODEL[Trained Classifier<br/>ResNet18 PyTorch]
-        end
-
-        IMAGES[Static Assets<br/>.static/]
-    end
-
-    subgraph Supabase["☁️ Supabase - Managed PostgreSQL"]
-        DB[(PostgreSQL Database<br/>Products, Orders<br/>Returns, Tickets)]
-        DBMGR[Database Manager<br/>database/db_manager.py]
-    end
-
-    subgraph QdrantCloud["☁️ Qdrant Cloud - Vector Database"]
-        VSTORE[(Vector Database<br/>Knowledge Base<br/>SOPs & Procedures)]
-        VSTMGR[Vector Store Manager<br/>qdrant/vector_store.py]
-    end
-
-    subgraph CloudRun["☁️ Google Cloud Run - Serverless Backend"]
-        CUSTOMGPT[Custom GPT API<br/>10M Parameter Model]
-    end
-
-    subgraph ExternalAPIs["☁️ External API Services"]
-        OPENAI[OpenAI API<br/>GPT-4 & GPT-3.5]
-        STABILITY[Stability AI API<br/>SD3 Text-to-Image]
-    end
-
-    %% User connections
-    BROWSER -->|HTTPS| MAIN
-
-    %% Frontend routing
-    MAIN --> CS
-    MAIN --> PC
-    MAIN --> GPT
-    MAIN --> IC
-    MAIN --> STAB
-    MAIN --> ADV
-
-    %% Customer Support flow
+ subgraph User["👤 User Layer"]
+        BROWSER["User Browser"]
+  end
+ subgraph SupportingProjects["🛠️ Supporting / Upstream Delivery Projects"]
+        GPTTRAIN["Custom GPT Creation / Training Project"]
+        GPTAPI_PROJ["Custom GPT Cloud Run API Project"]
+        IMGTRAIN["Image Classifier Training Project"]
+        IMGAPI_PROJ["Image Classifier Cloud Run API Project"]
+  end
+ subgraph Pages["Application Pages"]
+        CS["Customer Support<br>support_agent.py"]
+        PC["Pirate Chatbot<br>pirate_chatbot.py"]
+        GPT["Custom GPT Model<br>voyager_gpt.py"]
+        IC["Image Classifier<br>image_classifier.py"]
+        STAB["Text-to-Image<br>stability.py"]
+        ADV["Data Views<br>All_Data_Views.py"]
+  end
+ subgraph Frontend["Streamlit Frontend Container"]
+        MAIN["Main Page<br>app.py"]
+        Pages
+  end
+ subgraph Tools["Tool Layer"]
+        TSCHEMA["Tool Schemas<br>tools/schemas.py"]
+        TIMPL["Tool Implementations<br>tools/implementations.py"]
+  end
+ subgraph AgenticSystem["Agentic Support System"]
+        AGENT["Customer Support Agent<br>chatbot/agent.py"]
+        PROMPTS["System Prompts<br>chatbot/prompts.py"]
+        Tools
+  end
+ subgraph FlyIO["☁️ Fly.io - Frontend Hosting"]
+        Frontend
+        AgenticSystem
+  end
+ subgraph Supabase["☁️ Supabase - Managed PostgreSQL"]
+        DB[("PostgreSQL Database<br>Products, Orders<br>Returns, Tickets")]
+        DBMGR["Database Manager<br>database/db_manager.py"]
+  end
+ subgraph QdrantCloud["☁️ Qdrant Cloud - Vector Database"]
+        VSTORE[("Vector Database<br>Knowledge Base<br>SOPs &amp; Procedures")]
+        VSTMGR["Vector Store Manager<br>qdrant/vector_store.py"]
+  end
+ subgraph CloudRun["☁️ Google Cloud Run - Serverless Backend"]
+        CUSTOMGPT["Custom GPT API<br>10M Parameter Models"]
+        BPSAPI["BirdPlaneSuper API<br>Image Classification Service"]
+  end
+ subgraph GCS["☁️ Google Cloud Storage"]
+        BPSMODEL[("Model Artifact Bucket<br>models/best-model.pth")]
+  end
+ subgraph ExternalAPIs["☁️ External API Services"]
+        OPENAI["OpenAI API<br>GPT-4 &amp; GPT-3.5"]
+        STABILITY["Stability AI API<br>SD3 Text-to-Image"]
+  end
+    BROWSER -- HTTPS --> MAIN
+    MAIN --> CS & PC & GPT & IC & STAB & ADV
     CS --> AGENT
-    AGENT --> PROMPTS
-    AGENT --> TSCHEMA
-    AGENT --> TIMPL
-    AGENT -->|API Call| OPENAI
-
-    %% Tool implementations
-    TIMPL --> DBMGR
-    TIMPL --> VSTMGR
-    TIMPL -->|API Call| OPENAI
-
-    %% Database connections
-    DBMGR -->|PostgreSQL| DB
+    AGENT --> PROMPTS & TSCHEMA & TIMPL
+    AGENT -- API Call --> OPENAI
+    TIMPL --> VSTMGR & DBMGR
+    TIMPL -- API Call --> OPENAI
+    DBMGR -- PostgreSQL --> DB
+    VSTMGR -- Vector Search --> VSTORE
+    PC -- API Call --> OPENAI
+    GPT -- REST API --> CUSTOMGPT
+    IC -- REST API --> BPSAPI
+    BPSAPI -- Startup: download model --> BPSMODEL
+    STAB -- API Call --> STABILITY
     ADV --> DBMGR
+    GPTTRAIN -. produces model/runtime .-> CUSTOMGPT
+    GPTAPI_PROJ -. deploys .-> CUSTOMGPT
+    IMGTRAIN -. produces artifact .-> BPSMODEL
+    IMGAPI_PROJ -. deploys .-> BPSAPI
+    GPTTRAIN ~~~ CUSTOMGPT
+    GPTAPI_PROJ ~~~ CUSTOMGPT
+    IMGTRAIN ~~~ BPSMODEL
+    IMGAPI_PROJ ~~~ BPSAPI
 
-    %% Vector store connections
-    VSTMGR -->|Vector Search| VSTORE
-
-    %% Other page connections
-    PC -->|API Call| OPENAI
-    GPT -->|REST API| CUSTOMGPT
-    IC --> MODEL
-    STAB --> IMAGES
-    STAB -->|API Call| STABILITY
-
-    %% Styling
+     BROWSER:::user
+     GPTTRAIN:::ml
+     GPTAPI_PROJ:::ml
+     IMGTRAIN:::ml
+     IMGAPI_PROJ:::ml
+     CS:::frontend
+     PC:::frontend
+     GPT:::frontend
+     IC:::frontend
+     STAB:::frontend
+     ADV:::frontend
+     MAIN:::frontend
+     TSCHEMA:::agent
+     TIMPL:::agent
+     AGENT:::agent
+     PROMPTS:::agent
+     DB:::data
+     DBMGR:::data
+     VSTORE:::data
+     VSTMGR:::data
+     CUSTOMGPT:::ml
+     BPSAPI:::ml
+     BPSMODEL:::data
+     OPENAI:::external
+     STABILITY:::external
     classDef frontend fill:#e1f5ff,stroke:#01579b,stroke-width:2px
     classDef agent fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef data fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
@@ -107,13 +121,8 @@ flowchart TB
     classDef external fill:#ffebee,stroke:#b71c1c,stroke-width:2px
     classDef cloud fill:#e3f2fd,stroke:#1565c0,stroke-width:3px,stroke-dasharray: 5 5
     classDef user fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-
-    class BROWSER user
-    class MAIN,CS,PC,GPT,IC,STAB,ADV frontend
-    class AGENT,PROMPTS,TSCHEMA,TIMPL agent
-    class DB,DBMGR,VSTORE,VSTMGR data
-    class MODEL,IMAGES ml
-    class OPENAI,STABILITY,CUSTOMGPT external
+    style FlyIO stroke:#2962FF
+    style SupportingProjects stroke:#2e7d32,stroke-width:2px,stroke-dasharray: 5 5
 ```
 
 ## Deployment Infrastructure
@@ -255,16 +264,14 @@ OpenAI GPT-4 powered conversational agent with:
 
 **Available Tools**:
 - `draft_order`: Validate order information
-- `place_order`: Create orders in database
+- `create_order`: Create orders in database
 - `search_products`: Find products by criteria
 - `get_order_status`: Track order status
 - `cancel_order`: Cancel existing orders
-- `modify_order`: Update order details
 - `search_knowledge_base`: RAG-based knowledge retrieval
 - `create_support_ticket`: Log customer issues
 - `initiate_return`: Process returns
 - `get_shipping_cost`: Calculate shipping
-- And more...
 
 ## Data Layer
 
@@ -304,33 +311,6 @@ OpenAI GPT-4 powered conversational agent with:
 5. Context + query sent to GPT-4
 6. Natural language response generated
 
-## Machine Learning Layer
-
-### PyTorch Image Classifier
-**Architecture**: ResNet18 with transfer learning
-- Pre-trained on ImageNet
-- Fine-tuned on custom dataset
-- Confidence thresholding for "other" class
-
-### Model Training Pipeline (`model_tuning/`)
-Complete workflow for training custom classifiers:
-
-**Data Collection**:
-- `download_sample_data.py`: Create dataset structure
-- `download_images.py`: Web image collection
-- `generate_test_images.py`: Synthetic data generation
-
-**Training**:
-- `train_classifier.py`: PyTorch training loop
-- Data augmentation
-- Validation split
-- Early stopping
-
-**Evaluation**:
-- `test_model.py`: Model testing
-- `analyze_training_errors.py`: Error analysis
-- Confusion matrix generation
-
 ## Data Flow Examples
 
 ### Customer Support Query Flow
@@ -351,18 +331,19 @@ Complete workflow for training custom classifiers:
 ### Image Classification Flow
 ```
 1. User uploads image via Streamlit UI (Fly.io)
-2. Image preprocessed (resize 224x224, normalize)
-3. PyTorch model performs inference (runs on Fly.io)
-4. Confidence thresholding applied
-5. Predictions displayed with probabilities
+2. Image sent to Google Cloud Run API
+3. Image preprocessed (resize 224x224, normalize)
+4. PyTorch model performs inference
+5. Response sent back to Fly.io
+6. Predictions displayed with probabilities
 ```
 
 ### Custom GPT Generation Flow
 ```
 1. User configures parameters (seed, temp, max_tokens)
 2. Request sent to Google Cloud Run API
-3. Model generates text character-by-character
-4. Response streamed back to Fly.io
+3. Model generates text
+4. Response sent back to Fly.io
 5. Display in Streamlit UI
 ```
 
@@ -467,36 +448,37 @@ BRYCEGPT_API_URL=<cloud-run-url>
 ## File Structure
 ```
 resume-app/
-├── app.py                    # Main entry point
-├── Dockerfile                # Container configuration (to be added)
-├── requirements.txt          # Python dependencies
-├── pages/                    # Streamlit pages
-│   ├── customer_support.py   # Agentic chatbot
-│   ├── pirate_chatbot.py     # Simple chatbot
-│   ├── gpt_model.py          # Custom GPT interface
-│   ├── image_classifier.py   # Image classification
-│   ├── stability.py          # Text-to-image
-│   ├── All_Data_Views.py     # Data dashboard
-│   └── architecture.py       # Architecture diagram viewer
-├── chatbot/                  # Agent implementation
-│   ├── agent.py              # Core agent logic
-│   └── prompts.py            # System prompts
-├── tools/                    # Tool architecture
-│   ├── schemas.py            # Function definitions
-│   └── implementations.py    # Tool logic
-├── database/                 # Data persistence
-│   ├── db_manager.py         # Database operations
-│   ├── schema.sql            # Table definitions
-│   └── *_insert.sql          # Sample data
-├── qdrant/                   # Vector storage
-│   ├── vector_store.py       # Vector operations
-│   └── chunks.json           # Knowledge base
-├── model_tuning/             # ML training
-│   ├── train_classifier.py   # Training script
-│   ├── test_model.py         # Evaluation
-│   └── *.md                  # Documentation
-└── .static/                  # Static assets
-    └── architecture.svg      # This diagram
+├── app.py                      # Main entry point
+├── Dockerfile                  # Container configuration
+├── requirements.txt            # Python dependencies
+├── pages/                      # Streamlit pages
+│   ├── support_agent.py        # Agentic chatbot
+│   ├── pirate_chatbot.py       # Simple chatbot
+│   ├── voyager_gpt.py          # Custom GPT interface
+│   ├── image_classifier.py     # Image classification
+│   ├── stability.py            # Text-to-image
+│   └── architecture.py         # Architecture diagram viewer
+├── views/                      # Pages without sidebar links
+│   ├── All_Data_Views.py       # Data dashboard
+├── chatbot/                    # Agent implementation
+│   ├── agent.py                # Core agent logic
+│   └── prompts.py              # System prompts
+├── tools/                      # Tool architecture
+│   ├── schemas.py              # Function definitions
+│   └── implementations.py      # Tool logic
+├── database/                   # Data persistence
+│   ├── db_manager.py           # Database operations
+│   ├── schema.sql              # Table definitions
+│   └── *_insert.sql            # Sample data
+├── qdrant/                     # Vector storage
+│   ├── vector_store.py         # RAG Vector operations
+│   ├── vector_load_kb.py       # Vector knowledgebase creation
+│   ├── vector_load_onechunk.py # Vector db single-chunk manipulation
+│   └── chunks.json             # Knowledge base
+└── .static/                    # Static assets
+    └── architecture.svg        # This diagram
+    └── me.jpg                  # Bryce Rodgers selfie
+    └── parrot.jpg              # First stability pic
 ```
 
 ## Key Features
