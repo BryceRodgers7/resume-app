@@ -36,6 +36,7 @@ with st.expander("🎯 What This Demonstrates", expanded=False):
     - **Transfer Learning**: Fine-tuned ResNet50 architecture pre-trained on ImageNet for custom classification
     - **Complete Training Pipeline**:  Including raw data collection, early-loss cleaning, and hard-negative mining
     - **Model Deployment**: Containerized inference model, in a scalable Cloud Run service
+    - **Prediction Diagnostics**: Confidence scores, entropy analysis, and threshold signals that explain how and why the model reached its prediction
     """)
 
 with st.expander("🔧 Technical Architecture", expanded=False):
