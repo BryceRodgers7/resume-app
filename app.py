@@ -27,9 +27,7 @@ def home_page():
     """Home page content"""
     # Custom CSS for better styling
 
-    photo_path = Path(__file__).parent / '.static' / 'me.jpg'
-    # display my photo (convert Path to string for Streamlit compatibility)
-    st.image(str(photo_path), width=1024, caption="Bryce Rodgers")
+    
 
     st.markdown("""
         <style>
@@ -55,11 +53,11 @@ def home_page():
     st.sidebar.markdown("[Givio](https://www.giviogives.com) A Discovery Platform for Non-Profit Donors (In Development)")
 
     # Main content
-    st.title("Welcome to My AI Portfolio 🤖")
+    st.title("Welcome to Bryce's AI Portfolio 🤖")
 
     st.markdown("""
     <p style="font-size: 16px;">
-    I am a Senior Software Engineer and Applied Machine Learning Engineer with more than 15 years of experience building scalable backend systems, developer tooling, and data-driven applications. I specialize in full-stack AI systems, database design, serverless architecture, and modern cloud infrastructure, with a focus on taking ideas from inception to production deployment.
+    I am a Senior Software Engineer and Applied Machine Learning Engineer with more than 15 years of experience building scalable backend systems, developer tooling, and data-driven applications. I specialize in serverless architecture, full-stack AI systems, database design, and modern cloud infrastructure, with a history of taking ideas from inception to production deployment.
 
     I’ve shipped large production systems at companies like Pearson and Samsung, designing reliable software used by millions of people. I hold a U.S. patent (US9299264B2 — Sound Assessment and Remediation) and have an academic foundation in Mathematics, Computer Science, and Business Administration. That background shapes how I approach engineering decisions — balancing technical rigor, practical outcomes, and long-term system design.
 
@@ -71,6 +69,12 @@ def home_page():
     </p>
     """, unsafe_allow_html=True)
     
+    st.markdown("---")
+
+    photo_path = Path(__file__).parent / '.static' / 'me.jpg'
+    # display my photo (convert Path to string for Streamlit compatibility)
+    st.image(str(photo_path), width=1024, caption="Bryce Rodgers")
+
     st.markdown("---")
 
     # Create columns for better layout
