@@ -65,7 +65,7 @@ def home_page():
 
     I’m currently building a new application focused on connecting non-profit organizations with donors based on alignment of shared values. I’m particularly interested in practical AI systems that combine LLMs, vector search, and traditional software engineering to deliver reliable, useful tools.
 
-    You can view the source code for this application <a href="https://github.com/BryceRodgers7/resume-app">here</a>.
+    You can view the source code for this application <a href="https://github.com/BryceRodgers7/resume-app">here</a> and be sure to check out <a href="/architecture">this</a> schematic of the application architecture.
     </p>
     """, unsafe_allow_html=True)
     
