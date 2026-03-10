@@ -18,7 +18,7 @@ st.title("🏗️ Portfolio App Architecture")
 
 st.markdown("""
 The diagram below shows the complete **serverless/cloud-native** architecture of my Portfolio 
-application, including deployment infrastructure, application components, and external services.
+application, including deployment infrastructure, upstream delivery projectsapplication components, and external services.
             
 See below the diagram for more details.
 
@@ -37,6 +37,7 @@ with deployment_col1:
 - **Qdrant Cloud**: Vector database for semantic knowledge base
 - **Google Cloud Run**: Serverless backend for custom inference APIs
 - **OpenAI & Stability AI**: External API services
+- **Upstream Projects**: Model training pipelines & Cloud Run Deployment
     
     """)
 
@@ -68,11 +69,11 @@ if svg_path.exists():
     # Display SVG using HTML iframe for better rendering
     components.html(
         f"""
-        <div style="width: 100%; height: 1400px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
+        <div style="width: 100%; height: 1000px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
             {svg_content}
         </div>
         """,
-        height=1450,
+        height=1050,
         scrolling=True
     )
 else:
@@ -174,7 +175,7 @@ with tech_col3:
     - Streamlit
     - PostgreSQL
     - REST APIs
-    - Cursor IDE for code editing                 
+    - Flask/FastAPI                 
     """)
 
 st.divider()
