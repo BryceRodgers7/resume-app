@@ -140,7 +140,7 @@ with st.sidebar:
 
 # File uploader
 uploaded_file = st.file_uploader(
-    "Upload an image to classify",
+    "Upload an image to get started",
     type=['png', 'jpg', 'jpeg', 'webp'],
     help="Upload a clear image for best results"
 )
