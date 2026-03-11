@@ -31,7 +31,7 @@ st.markdown("""
 ### Interactive AI Chat with a Customizable System Prompt
 
 This demo showcases **OpenAI GPT-3.5-turbo** integration with a fully customizable system prompt. 
-The chatbot demonstrates real-time streaming responses and dynamic personality control through prompt engineering (right now it thinks it's a pirate, but you can change that!)
+The chatbot showcases real-time streaming responses and dynamic personality control through prompt engineering (right now it thinks it's a pirate, but you can change that!)
 """)
 
 with st.expander("🎯 What This Demonstrates", expanded=False):
