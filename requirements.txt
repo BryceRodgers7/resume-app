@@ -29,7 +29,7 @@ pandas>=2.0.0
 python-dotenv>=1.0.0
 
 # Qdrant
-qdrant-client==1.7.0
+qdrant-client>=1.8.0
 fastembed>=0.2.0  # Required for Qdrant embeddings
 
 # Database
