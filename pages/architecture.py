@@ -61,21 +61,11 @@ st.markdown("### 📊 Architecture Diagram")
 # Path to the SVG file
 svg_path = Path(__file__).parent.parent / '.static' / 'architecture.svg'
 
-if svg_path.exists():
-    # Read the SVG file
-    with open(svg_path, 'r', encoding='utf-8') as f:
+if svg_path.exists():    
+    with open(svg_path, "r", encoding="utf-8") as f:
         svg_content = f.read()
-    
-    # Display SVG using HTML iframe for better rendering
-    components.html(
-        f"""
-        <div style="width: 100%; height: 1000px; overflow: auto; border: 1px solid #ddd; border-radius: 5px; background: white;">
-            {svg_content}
-        </div>
-        """,
-        height=1050,
-        scrolling=True
-    )
+
+    st.image(svg_content)
 else:
     st.error("⚠️ Architecture diagram not found at `.static/architecture.svg`")
     st.info("Please ensure the architecture.svg file exists in the .static folder.")
