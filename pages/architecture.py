@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 from pathlib import Path
 import nav
 from app import home_page
+from components.svg_viewer import show_zoomable_svg
 
 # Page configuration
 st.set_page_config(
@@ -62,10 +63,7 @@ st.markdown("### 📊 Architecture Diagram")
 svg_path = Path(__file__).parent.parent / '.static' / 'architecture.svg'
 
 if svg_path.exists():    
-    with open(svg_path, "r", encoding="utf-8") as f:
-        svg_content = f.read()
-
-    st.image(svg_content)
+    show_zoomable_svg(svg_path, preview_height=500)
 else:
     st.error("⚠️ Architecture diagram not found at `.static/architecture.svg`")
     st.info("Please ensure the architecture.svg file exists in the .static folder.")
