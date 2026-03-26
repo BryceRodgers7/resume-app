@@ -37,7 +37,7 @@ with st.expander("🎯 What This Demonstrates", expanded=False):
       - Attention mechanisms and positional encoding
       - Loss calculation and optimization
       - Hyperparameter tuning
-    - **MLOps & Deployment**: Models deployed as a REST API on Google Cloud Run with containerization and automatic scaling
+    - **MLOps & Deployment**: Models deployed as a REST API on Google Cloud Run with containerization (Docker/Kubernetes) and automatic scaling, provisioned with Terraform
     - **View the Code**: [repository](https://github.com/BryceRodgers7/brycegpt)
     """)
 

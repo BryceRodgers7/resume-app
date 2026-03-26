@@ -35,11 +35,11 @@ with st.expander("🎯 What This Demonstrates", expanded=False):
     st.markdown("""
     - **Transfer Learning**: Fine-tuned ResNet50 architecture pre-trained on ImageNet for custom classification
     - **Complete Training Pipeline**:  Including raw data collection, early-loss cleaning, and hard-negative mining
-    - **Model Deployment**: Containerized inference model, in a scalable Cloud Run service
+    - **Model Deployment**: Containerized inference model (Docker/Kubernetes) in a scalable Cloud Run service, provisioned with Terraform
     - **Prediction Diagnostics**: Confidence scores, entropy analysis, and threshold signals that explain how and why the model reached its prediction
     """)
 
-with st.expander("🔧 Technical Architecture", expanded=False):
+with st.expander("🔧 Model Architecture", expanded=False):
     st.markdown("""
     **Model Specifications:**               
     - **Architecture**: ImageNet-pretrained ResNet50 with fine-tuned final residual block
