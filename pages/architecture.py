@@ -102,7 +102,8 @@ with col1:
     **Dockerized Custom GPT and Image Classification Model APIs**
     - 10M parameter GPT models (Shakespeare and Voyager)
     - Fine-tuned ResNet50 Image Classifier
-    - Auto-scaling containers
+    - Provisioned with Terraform
+    - Auto-scaling containers via Kubernetes
     - Pay-per-request pricing
     - Zero idle costs
     """)
@@ -140,10 +141,10 @@ with tech_col1:
     st.markdown("""
     **☁️ Cloud Infrastructure**
     - **Fly.io** (Frontend)
-    - **Supabase** (Database)
-    - **Qdrant Cloud** (Vectors)
+    - **Supabase & Qdrant Cloud** (SQL & Vector Databases)    
     - **Google Cloud Run & Storage** (Backend & storage)
-    - **Docker** (Containers)
+    - **Kubernetes, Docker** (Scalable Containers)
+    - **Terraform** (Provisioning)
     """)
 
 with tech_col2:
