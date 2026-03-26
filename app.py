@@ -114,6 +114,8 @@ def home_page():
         - Python 
         - Streamlit
         - Docker
+        - Kubernetes
+        - Terraform
         - PostgreSQL
         - Qdrant
         - Google Cloud Run/Storage
