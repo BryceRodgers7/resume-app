@@ -2,8 +2,27 @@ import streamlit as st
 import requests
 import os
 import logging
+import time
+import concurrent.futures
 import nav
 from app import home_page
+
+COLD_START_HINT_SEC = 6
+COLD_START_HINT_MESSAGE = "backend may need a cold start, just a moment.."
+
+
+def run_with_cold_start_hint(request_fn, hint_placeholder):
+    """Run request_fn in a worker thread; after COLD_START_HINT_SEC, show a cold-start hint."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(request_fn)
+        start = time.monotonic()
+        hint_shown = False
+        while not future.done():
+            if not hint_shown and time.monotonic() - start >= COLD_START_HINT_SEC:
+                hint_placeholder.info(COLD_START_HINT_MESSAGE)
+                hint_shown = True
+            time.sleep(0.25)
+        return future.result()
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -80,18 +99,17 @@ st.divider()
 # Configuration
 API_URL = os.getenv("BRYCEGPT_API_URL", "http://localhost:8080")
 
-# Initialize API health check state
-if "api_health_checked" not in st.session_state:
-    st.session_state.api_health_checked = False
-    st.session_state.api_healthy = None  # None = not checked yet
-    st.session_state.api_status_message = "⏳ API status not checked yet"
+# Optional manual API check (sidebar); not required before generate
+if "api_healthy" not in st.session_state:
+    st.session_state.api_healthy = None
+if "api_status_message" not in st.session_state:
+    st.session_state.api_status_message = ""
 
-# Function to check API health (called only when needed)
+
 def check_api_health():
-    """Check API health - called on-demand rather than blocking page load."""
+    """Optional manual health check (allows Cloud Run cold start)."""
     try:
-        # Use shorter timeout to avoid blocking
-        response = requests.get(f"{API_URL}/health", timeout=10)
+        response = requests.get(f"{API_URL}/health", timeout=20)
         if response.status_code == 200:
             st.session_state.api_healthy = True
             st.session_state.api_status_message = "✅ API is connected and ready!"
@@ -100,11 +118,10 @@ def check_api_health():
             st.session_state.api_status_message = f"❌ API returned status {response.status_code}"
     except requests.exceptions.Timeout:
         st.session_state.api_healthy = False
-        st.session_state.api_status_message = "⏱️ API health check timed out (may need cold start time)"
+        st.session_state.api_status_message = "⏱️ API health check timed out"
     except Exception as e:
         st.session_state.api_healthy = False
         st.session_state.api_status_message = f"❌ Could not connect to API: {str(e)}"
-    st.session_state.api_health_checked = True
 
 # Sidebar for generation parameters
 with st.sidebar:
@@ -117,14 +134,13 @@ with st.sidebar:
             check_api_health()
         st.rerun()
     
-    if st.session_state.api_healthy is None:
-        st.info(st.session_state.api_status_message)
-        st.caption("Click 'Check API Status' to verify connection")
-    elif st.session_state.api_healthy:
+    st.caption(f"Endpoint: {API_URL}")
+    if st.session_state.api_healthy is True:
         st.success(st.session_state.api_status_message)
-    else:
+    elif st.session_state.api_healthy is False:
         st.error(st.session_state.api_status_message)
-        st.caption(f"Endpoint: {API_URL}")
+    else:
+        st.caption("Optional: click 'Check API Status' to verify the service before generating.")
     
     # Generation parameters
     st.subheader("🎛️ Generation Parameters")
@@ -215,16 +231,7 @@ if st.session_state.is_generating:
     st.session_state.show_results = False
     st.session_state.result_data = None
     
-    # Check API health on first generate if not checked yet
-    if st.session_state.api_healthy is None:
-        with st.spinner("Checking API connection..."):
-            check_api_health()
-    
-    if not st.session_state.api_healthy:
-        st.session_state.is_generating = False
-        st.error("⚠️ API is not available. Please check the connection using the 'Check API Status' button in the sidebar.")
-        st.stop()
-    
+    cold_hint = st.empty()
     with st.spinner("Generating text..."):
         try:
             # Make API request
@@ -244,11 +251,14 @@ if st.session_state.is_generating:
             # Log the request for debugging
             logger.info(f"Making API request with model={model}, seed={seed}, temperature={temperature}, max_tokens={max_tokens}, context_length={len(context_value) if context_value else 0}")
             
-            response = requests.post(
-                f"{API_URL}/generate",
-                json=payload,
-                timeout=120
-            )
+            def post_generate():
+                return requests.post(
+                    f"{API_URL}/generate",
+                    json=payload,
+                    timeout=120
+                )
+
+            response = run_with_cold_start_hint(post_generate, cold_hint)
             
             if response.status_code == 200:
                 result = response.json()
@@ -367,40 +377,36 @@ st.markdown("---")
 st.markdown("### 📖 Model Vocabulary")
 
 if st.button("🔤 Load Vocabulary", use_container_width=True):
-    # Check API health first if not checked yet
-    if st.session_state.api_healthy is None:
-        with st.spinner("Checking API connection..."):
-            check_api_health()
-    
-    if not st.session_state.api_healthy:
-        st.error("⚠️ API is not available. Please check the connection using the 'Check API Status' button in the sidebar.")
-    else:
-        with st.spinner("Loading vocabulary..."):
-            try:
-                response = requests.get(f"{API_URL}/vocab/{model}", timeout=20)
-                
-                if response.status_code == 200:
-                    vocab_data = response.json()
-                    st.success("✅ Vocabulary loaded!")
-                    
-                    # Display vocabulary information
-                    if isinstance(vocab_data, dict):
-                        vocab_size = vocab_data.get("vocab_size", len(vocab_data.get("vocab", [])))
-                        st.metric("Vocabulary Size", vocab_size)
-                        
-                        with st.expander("View Vocabulary Details"):
-                            st.json(vocab_data)
-                    else:
+    cold_hint = st.empty()
+    with st.spinner("Loading vocabulary..."):
+        try:
+            def get_vocab():
+                return requests.get(f"{API_URL}/vocab/{model}", timeout=120)
+
+            response = run_with_cold_start_hint(get_vocab, cold_hint)
+
+            if response.status_code == 200:
+                vocab_data = response.json()
+                st.success("✅ Vocabulary loaded!")
+
+                # Display vocabulary information
+                if isinstance(vocab_data, dict):
+                    vocab_size = vocab_data.get("vocab_size", len(vocab_data.get("vocab", [])))
+                    st.metric("Vocabulary Size", vocab_size)
+
+                    with st.expander("View Vocabulary Details"):
                         st.json(vocab_data)
                 else:
-                    st.error(f"Failed to load vocabulary: {response.status_code}")
-                    
-            except requests.exceptions.Timeout:
-                st.error("⏱️ Request timed out.")
-            except requests.exceptions.ConnectionError:
-                st.error("🔌 Could not connect to API.")
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                    st.json(vocab_data)
+            else:
+                st.error(f"Failed to load vocabulary: {response.status_code}")
+
+        except requests.exceptions.Timeout:
+            st.error("⏱️ Request timed out.")
+        except requests.exceptions.ConnectionError:
+            st.error("🔌 Could not connect to API.")
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
 
 # Information section
 st.markdown("---")

@@ -5,9 +5,28 @@ import json
 import os
 import math
 import logging
+import time
+import concurrent.futures
 from io import BytesIO
 import nav
 from app import home_page
+
+COLD_START_HINT_SEC = 6
+COLD_START_HINT_MESSAGE = "backend may need a cold start, just a moment.."
+
+
+def run_with_cold_start_hint(request_fn, hint_placeholder):
+    """Run request_fn in a worker thread; after COLD_START_HINT_SEC, show a cold-start hint."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(request_fn)
+        start = time.monotonic()
+        hint_shown = False
+        while not future.done():
+            if not hint_shown and time.monotonic() - start >= COLD_START_HINT_SEC:
+                hint_placeholder.info(COLD_START_HINT_MESSAGE)
+                hint_shown = True
+            time.sleep(0.25)
+        return future.result()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -163,14 +182,17 @@ if uploaded_file:
                 st.error("❌ API URL not configured. Please set the BPSIMGCLSS_API_URL environment variable.")
                 st.stop()
             
+            cold_hint = st.empty()
             with st.spinner("Analyzing image via API..."):
                 # Convert image to bytes for API request
                 img_byte_arr = BytesIO()
                 image.save(img_byte_arr, format=image.format or 'JPEG')
                 img_byte_arr.seek(0)
-                
-                # Make API prediction
-                result, error = predict_with_api(img_byte_arr)
+
+                def run_predict():
+                    return predict_with_api(img_byte_arr)
+
+                result, error = run_with_cold_start_hint(run_predict, cold_hint)
                 
                 if error:
                     st.error(f"❌ {error}")
