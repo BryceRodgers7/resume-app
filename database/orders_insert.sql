@@ -3,7 +3,7 @@
 -- =====================
 
 INSERT INTO agent_orders
-(customer_name, customer_email, customer_phone, shipping_address, zip_code, city, state, status, total_amount)
+(customer_name, customer_email, customer_phone, street_address, zip_code, city, state, status, total_amount)
 VALUES
 ('Alice Morgan','alice.morgan@email.com','555-1001','12 Oak St','80202','Denver','CO','shipped',1597.00),
 ('Brian Chen','bchen@email.com','555-1002','88 Pine Rd','95112','San Jose','CA','processing',249.00),
