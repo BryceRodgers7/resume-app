@@ -111,6 +111,16 @@ def get_agent():
 def render_sidebar():
     """Render the sidebar with tool information and usage tracking."""
     with st.sidebar:
+        if os.getenv("OPENAI_API_KEY"):
+            st.success("OpenAI API key is good.", icon="✅")
+        else:
+            st.warning(
+                "OpenAI API key not found in environment variables.",
+                icon="⚠️",
+            )
+
+        st.divider()
+
         # Tool usage statistics
         st.markdown("### 📊 Tool Usage (This Session)")
         if st.session_state.tool_usage:
