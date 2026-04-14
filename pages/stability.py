@@ -1,6 +1,7 @@
 import streamlit as st
 import io
 import json
+import logging
 import os
 from PIL import Image
 import requests
@@ -9,6 +10,8 @@ import getpass
 from random import randrange
 import nav
 from app import home_page
+
+logger = logging.getLogger(__name__)
 
 # Page configuration
 st.set_page_config(
@@ -117,7 +120,7 @@ def send_generation_request(host, params,):
         files["none"] = ''
 
     # Send request
-    print(f"Sending REST request to {host}...")
+    logger.info("Sending REST request to %s", host)
     response = requests.post(
         host,
         headers=headers,
@@ -125,6 +128,12 @@ def send_generation_request(host, params,):
         data=params
     )
     if not response.ok:
+        body_preview = (response.text or "")[:2000]
+        logger.error(
+            "Stability API error: status=%s body=%s",
+            response.status_code,
+            body_preview,
+        )
         raise Exception(f"HTTP {response.status_code}: {response.text}")
 
     return response
@@ -186,10 +195,17 @@ if click:
     
 if st.session_state.show_stability:
     #fake_hit_stab(img_prompt, placeholder)
-    img_bytes = hit_stability(img_prompt)
-    placeholder = st.image(img_bytes, caption=img_prompt)
-    img_BufferedReader = io.BufferedReader(img_bytes)
-    fragment_function(img_BufferedReader)
+    try:
+        img_bytes = hit_stability(img_prompt)
+        placeholder = st.image(img_bytes, caption=img_prompt)
+        img_BufferedReader = io.BufferedReader(img_bytes)
+        fragment_function(img_BufferedReader)
+    except Exception:
+        logger.exception("Stability page: image generation or display failed")
+        st.error(
+            "Image generation failed. Details were written to the server log; "
+            "check `fly logs` for the full traceback."
+        )
 else:
     # st.write('sample image...')
     fake_hit_stab()
