@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import sys
 from PIL import Image
 import requests
 import time
@@ -191,12 +192,26 @@ def fragment_function(img_BufferedReader):
       )
 
 if click:
+    logger.info(
+        "Stability: 'See It!' button pressed (prompt_len=%d)",
+        len((img_prompt or "").strip()),
+    )
+    sys.stderr.flush()
     st.session_state.show_stability = True
-    
+
 if st.session_state.show_stability:
     #fake_hit_stab(img_prompt, placeholder)
     try:
+        if click:
+            logger.info(
+                "Stability: starting image generation (same run as button click)",
+            )
+            sys.stderr.flush()
         img_bytes = hit_stability(img_prompt)
+        if click:
+            logger.info(
+                "hit_stability() has completed, we have the bytes"
+            )
         placeholder = st.image(img_bytes, caption=img_prompt)
         img_BufferedReader = io.BufferedReader(img_bytes)
         fragment_function(img_BufferedReader)
