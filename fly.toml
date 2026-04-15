@@ -9,6 +9,11 @@ internal_port = 8_501
 min_machines_running = 0
 processes = [ "app" ]
 
+# Streamlit uses a long-lived WebSocket. A higher idle timeout cuts down proxy closing the connection
+# during medium-length idle periods. Multi-hour background tabs may still need a refresh (browser limits).
+[http_service.http_options]
+idle_timeout = 3600
+
 [[vm]]
 cpu_kind = "shared"
 cpus = 1

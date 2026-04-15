@@ -1,18 +1,29 @@
 import streamlit as st
-import io
-import json
 import logging
 import os
 import sys
-from PIL import Image
 import requests
 import time
-import getpass
-from random import randrange
 import nav
 from app import home_page
 
-logger = logging.getLogger(__name__)
+
+def _stability_stderr(msg: str) -> None:
+    """Always write to stderr; Fly logs capture this even when page loggers do not propagate."""
+    print(f"[stability] {msg}", file=sys.stderr, flush=True)
+
+
+# Dedicated logger with its own StreamHandler — Streamlit runs page scripts in a context where
+# getLogger(__name__) often does not propagate INFO to the root handler, so __main__ logs appear in Fly but not these.
+_stability_log = logging.getLogger("stability_fly")
+if not _stability_log.handlers:
+    _h = logging.StreamHandler(sys.stderr)
+    _h.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s [stability_fly] %(message)s")
+    )
+    _stability_log.addHandler(_h)
+    _stability_log.setLevel(logging.INFO)
+    _stability_log.propagate = False
 
 # Page configuration
 st.set_page_config(
@@ -24,7 +35,9 @@ st.set_page_config(
 
 nav.config_navigation(home_page)
 
-# current_content = io.BytesIO()
+if "stability_stderr_boot" not in st.session_state:
+    st.session_state.stability_stderr_boot = True
+    _stability_stderr("page loaded this browser session (stderr ok)")
 
 st.title("🎨 Text-to-Image Generation")
 
@@ -83,6 +96,12 @@ with st.expander("💡 Examples to Try", expanded=False):
 
 st.warning("⚠️ **Important**: Each image generation costs $0.25 through the Stability AI API. This demo is intended to show API integration capabilities.")
 
+st.caption(
+    "If this tab sat in the background for a long time, **refresh the page** before clicking "
+    "See It! — the live connection to the server can go stale while idle (browser / hosting), "
+    "which looks like a blank main area while the sidebar still works."
+)
+
 st.divider()
 
 parrot_path = './.static/parrot.jpg'
@@ -121,34 +140,31 @@ def send_generation_request(host, params,):
         files["none"] = ''
 
     # Send request
-    logger.info("Sending REST request to %s", host)
+    _stability_log.info("Sending REST request to %s", host)
+    _stability_stderr(f"Sending REST request to {host}")
     response = requests.post(
         host,
         headers=headers,
         files=files,
-        data=params
+        data=params,
+        timeout=(30, 180),
     )
     if not response.ok:
         body_preview = (response.text or "")[:2000]
-        logger.error(
+        _stability_log.error(
             "Stability API error: status=%s body=%s",
             response.status_code,
             body_preview,
+        )
+        _stability_stderr(
+            f"Stability API error: status={response.status_code} body={body_preview[:500]}"
         )
         raise Exception(f"HTTP {response.status_code}: {response.text}")
 
     return response
 
-def get_bytes(content):
-    return io.BytesIO(content)
-
-# def get_image_bytes():
-#     return current_content
-    
 if "show_stability" not in st.session_state:
         st.session_state.show_stability = False
-
-placeholder = st.empty()
 
 @st.cache_data
 def hit_stability(prompt):
@@ -171,7 +187,9 @@ def hit_stability(prompt):
     if finish_reason == 'CONTENT_FILTERED':
         raise Warning("Generation failed NSFW classifier")
 
-    return io.BytesIO(content)
+    # Cache immutable bytes, not io.BytesIO — st.image() advances the buffer to EOF; the next rerun
+    # reuses the cached object and can blank the main pane while the sidebar still renders.
+    return content
 
 # move logic to here later
 def fake_hit_stab():
@@ -183,49 +201,38 @@ img_prompt = st.text_area("What would you like to see?", parrot_caption)
 st.divider()
 click = st.button("See It!", help="submit your prompt and get an image", use_container_width=False)
 
-def fragment_function(img_BufferedReader):
-    dl_click = st.download_button(
-      label="Download Image",
-      data=img_BufferedReader,
-      file_name="generated_image.png",
-      mime="image/jpeg",
-      )
-
 if click:
-    logger.info(
-        "Stability: 'See It!' button pressed (prompt_len=%d)",
-        len((img_prompt or "").strip()),
-    )
-    sys.stderr.flush()
+    _pl = len((img_prompt or "").strip())
+    _stability_log.info("'See It!' pressed (prompt_len=%d)", _pl)
+    _stability_stderr(f"See It! pressed (prompt_len={_pl})")
     st.session_state.show_stability = True
 
 if st.session_state.show_stability:
-    #fake_hit_stab(img_prompt, placeholder)
     try:
         if click:
-            logger.info(
-                "Stability: starting image generation (same run as button click)",
-            )
-            sys.stderr.flush()
+            _stability_log.info("starting image generation (same run as button click)")
+            _stability_stderr("starting image generation (same run as button click)")
         img_bytes = hit_stability(img_prompt)
         if click:
-            logger.info(
-                "hit_stability() has completed, we have the bytes"
-            )
-        placeholder = st.image(img_bytes, caption=img_prompt)
-        img_BufferedReader = io.BufferedReader(img_bytes)
-        fragment_function(img_BufferedReader)
+            _stability_log.info("hit_stability() completed")
+            _stability_stderr("hit_stability() completed")
+        st.image(img_bytes, caption=img_prompt)
+        st.download_button(
+            label="Download Image",
+            data=img_bytes,
+            file_name="generated_image.jpg",
+            mime="image/jpeg",
+        )
     except Exception:
-        logger.exception("Stability page: image generation or display failed")
+        _stability_log.exception("Stability page: image generation or display failed")
+        _stability_stderr("exception during generation or display (see stability_fly traceback above)")
         st.error(
             "Image generation failed. Details were written to the server log; "
             "check `fly logs` for the full traceback."
         )
 else:
-    # st.write('sample image...')
     fake_hit_stab()
-    placeholder = st.image(parrot_path, caption=parrot_caption)
-    img_bytes = '' # get img bytes for pregenerated file later
+    st.image(parrot_path, caption=parrot_caption)
     
 
     
