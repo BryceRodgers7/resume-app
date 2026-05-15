@@ -20,6 +20,7 @@ def config_navigation(home_page):
             st.Page("pages/pirate_chatbot.py", title="Pirate Chatbot", icon="🏴‍☠️"),
             st.Page("pages/stability.py", title="Stability", icon="🎨"),
             st.Page("pages/voyager_gpt.py", title="Voyager GPT", icon="🚀"),
+            st.Page("pages/fhir_omop_demo.py", title="FHIR → OMOP", icon="🧬"),
             st.Page("pages/architecture.py", title="Architecture", icon="🏗️"),
         ]
         pg = st.navigation(pages)

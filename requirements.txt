@@ -18,9 +18,14 @@ requests>=2.31.0
 httpx>=0.25.0
 # ddgs==9.10.0  # Commented out - not needed for production
 
-# Data Science
-numpy>=1.24.0
-pandas>=2.0.0
+# Data Science — pinned to exact, mutually ABI-compatible versions so the
+# Dockerfile build on Fly.io and any local install land on the same wheels.
+# pandas 2.1.3 was built against numpy 1.x — pairing it with numpy 2.x raises
+# ValueError: numpy.dtype size changed at import time. Bumping these is fine,
+# but do it together and re-pin to a known-compatible pair (see also the
+# torch==2.0.0+cpu line in the Dockerfile, which also requires numpy<2).
+numpy==1.26.4
+pandas==2.1.3
 
 # Optional: Stability AI
 # stability-sdk>=0.8.0  # Not needed - using requests directly
@@ -35,6 +40,4 @@ fastembed>=0.2.0  # Required for Qdrant embeddings
 # Database
 psycopg2-binary==2.9.9
 
-# Numpy
-numpy<2
 

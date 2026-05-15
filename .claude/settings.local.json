@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python -c \"import numpy, pandas; print\\('numpy', numpy.__version__, numpy.__file__\\); print\\('pandas', pandas.__version__, pandas.__file__\\)\")",
+      "Bash(python -c \"import numpy; print\\('numpy', numpy.__version__, numpy.__file__\\)\")",
+      "Bash(python -m pip show pandas)",
+      "Bash(python -m pip show numpy)",
+      "Bash(python -m pip install --user --force-reinstall \"numpy==1.26.4\" \"pandas==2.1.3\")",
+      "Bash(python *)"
+    ]
+  }
+}
