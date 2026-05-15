@@ -11,7 +11,9 @@ certified interoperability, and not validated for clinical use.
 
 ## What this demonstrates
 
-- Reading **FHIR R4 Bundle JSON** that resembles Synthea output
+- Reading **FHIR R4 Bundle JSON** that resembles Synthea output, from both
+  bundled sample data *and* user-uploaded files (multi-file
+  `st.file_uploader`)
 - A typical healthcare-ETL shape: **raw landing zone (JSONB) → transform →
   curated tables → analytics queries**, with each stage visible in the UI
 - Awareness of the standard biomedical vocabularies: **SNOMED CT**,
@@ -22,6 +24,22 @@ certified interoperability, and not validated for clinical use.
 - An **OMOP-inspired** relational layout — `person`, `visit_occurrence`,
   `condition_occurrence`, `measurement`, `drug_exposure` — implemented as
   plain `fhir_demo_*` tables in the existing public schema
+- **Single-transaction ingest** — `pipeline/db.bulk_ingest_resources()`
+  opens one Supabase connection and runs run-open + raw-insert + run-close
+  in one transaction. The earlier three-round-trip pattern caused visible
+  hangs on slow connections; one connection per click is dramatically more
+  robust.
+- **Step-by-step progress UX** — every long handler (`Reset`, `Load`,
+  `Run Transformation Pipeline`) uses `st.status(..., expanded=True)` with
+  per-step messages and `time.perf_counter()` timings, so the user can
+  watch the pipeline run instead of staring at a blank spinner.
+- **Pipeline-stage status banner** — when raw resources exist but the OMOP
+  tables are empty, the page surfaces a hint to run the transformation
+  step. Avoids the "I loaded data but everything is zero" papercut.
+- **Structured logging at every step** — file discovery, bundle parsing,
+  grouping, DB connect, run open/close, row counts, and per-step
+  `perf_counter` elapsed are logged at INFO level. Useful for diagnosing
+  network or Supabase slowness after the fact.
 
 ## Architecture
 
@@ -60,8 +78,11 @@ projects/fhir_omop/
 │   └── patient_003_chen.json       # CKD + hyperlipidemia, plus one local-code
 │                                   # condition to demo the "unmapped" path
 └── pipeline/
-    ├── db.py                       # thin SQL helpers built on DatabaseManager
+    ├── db.py                       # thin SQL helpers built on DatabaseManager,
+    │                               # including bulk_ingest_resources() single-tx ingest
     ├── fhir_loader.py              # parse Bundle JSON, group resources by type
+    │                               # (group_bundles_by_resource_type works on
+    │                               # already-parsed bundles for the upload path)
     ├── transformers.py             # FHIR → OMOP-inspired row dicts + mapping report
     └── analytics.py                # SQL behind the dashboard metrics/charts
 
@@ -91,12 +112,21 @@ No new dependencies are introduced — everything required already ships in
    against the database used by the rest of the app.
 2. Open the **FHIR → OMOP** page in the Streamlit app.
 3. Click **Reset Demo Data** — truncates every `fhir_demo_*` table.
-4. Click **Load Sample FHIR Bundles** — opens an ingestion run and persists
-   every parsed resource as JSONB in `fhir_demo_raw_fhir_resource`.
-5. Click **Run Transformation Pipeline** — reads the raw resources back
-   out, populates the OMOP-inspired tables, and generates the mapping
-   report.
-6. Browse the tabs: raw resources, curated tables, mapping report,
+4. Load raw data — either:
+   - Click **Load Sample FHIR Bundles** to ingest the three bundled
+     synthetic patients, or
+   - Expand **📤 Or upload your own FHIR Bundle JSON files**, drop one or
+     more FHIR R4 Bundles into the file uploader, and click
+     **Load Uploaded Bundles**.
+
+   Both paths funnel through the same `bulk_ingest_resources()` helper, so
+   they produce the same audit trail (one `fhir_demo_ingestion_run` row per
+   click) and the same status / logging surface.
+5. The status banner above the metrics will tell you "*N raw resources
+   loaded — click Run Transformation Pipeline*". Click it.
+6. **Run Transformation Pipeline** reads the raw resources back out,
+   populates the OMOP-inspired tables, and generates the mapping report.
+7. Browse the tabs: raw resources, curated tables, mapping report,
    analytics dashboard, architecture notes.
 
 ## Limitations (by design)

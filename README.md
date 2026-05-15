@@ -9,6 +9,7 @@ A Streamlit-based portfolio app showcasing various AI/ML projects and demos.
 - **Image Classifier**: Fine-tuned ResNet50 (bird / plane / superman / other) served via Cloud Run
 - **Text-to-Image**: Stability AI SD3 integration
 - **Pirate Chatbot**: GPT-3.5-turbo with a live-editable system prompt to demonstrate prompt engineering
+- **FHIR → OMOP Demo**: Simplified healthcare interoperability — loads synthetic FHIR R4 bundles, transforms them into an OMOP-inspired schema, and surfaces analytics + a terminology mapping report. Supports both sample data and user-uploaded bundles.
 - **Architecture View**: Interactive zoomable diagram of the full serverless stack
 
 ## 📦 Installation
@@ -50,6 +51,7 @@ Each page lives in `pages/` and is registered in `nav.py`:
 | `pages/pirate_chatbot.py` | Pirate Chatbot | GPT-3.5-turbo with editable system prompt |
 | `pages/stability.py` | Stability | Stability AI SD3 text-to-image |
 | `pages/voyager_gpt.py` | Voyager GPT | Calls remote custom-GPT inference API |
+| `pages/fhir_omop_demo.py` | FHIR → OMOP | Synthetic FHIR R4 → OMOP-inspired schema, with analytics + mapping report |
 | `pages/architecture.py` | Architecture | Renders the zoomable SVG diagram |
 
 The home page is defined in `app.py` (`home_page()`), passed into
@@ -84,6 +86,7 @@ resume-app/
 │   ├── pirate_chatbot.py
 │   ├── stability.py
 │   ├── voyager_gpt.py
+│   ├── fhir_omop_demo.py
 │   └── architecture.py
 ├── views/                       # Pages reached only via in-app links (no sidebar)
 │   └── All_Data_Views.py
@@ -96,12 +99,20 @@ resume-app/
 ├── database/                    # PostgreSQL (Supabase) access
 │   ├── db_manager.py            # Connection + queries
 │   ├── schema.sql               # Table DDL (agent_* tables)
-│   └── *_insert.sql             # Seed data
+│   ├── *_insert.sql             # Seed data
+│   └── fhir_omop_sql/           # DDL + reset for the FHIR → OMOP demo
+│       ├── 001_create_tables.sql
+│       └── 002_seed_reset.sql
 ├── qdrant/                      # Vector DB (knowledge base)
 │   ├── vector_store.py          # Search interface used by the agent
 │   ├── vector_load_kb.py        # Bulk-load chunks.json into Qdrant
 │   ├── vector_load_onechunk.py  # Single-chunk upsert helper
 │   └── chunks.json              # Knowledge-base source content
+├── projects/                    # Self-contained portfolio sub-projects
+│   └── fhir_omop/               # FHIR → OMOP demo (sample data + pipeline)
+│       ├── README.md
+│       ├── sample_data/         # Synthetic FHIR R4 Bundle JSON
+│       └── pipeline/            # db / fhir_loader / transformers / analytics
 ├── components/
 │   └── svg_viewer.py            # Zoomable/fullscreen SVG component
 ├── models/                      # Reference copy of trained classifier artifact
@@ -121,7 +132,7 @@ shell/`secrets.toml` locally):
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | support agent, pirate chatbot, vector store | OpenAI access |
-| `SUPADATABASE_URL` | `database/db_manager.py` | PostgreSQL connection string (Supabase) |
+| `SUPADATABASE_URL` | `database/db_manager.py` (support agent, data views, FHIR-OMOP demo) | PostgreSQL connection string (Supabase) |
 | `QDRANT_URL` | `qdrant/vector_store.py` | Qdrant Cloud endpoint |
 | `QDRANT_API_KEY` | `qdrant/vector_store.py` | Qdrant Cloud auth |
 | `STABILITY_KEY` | `pages/stability.py` | Stability AI SD3 |

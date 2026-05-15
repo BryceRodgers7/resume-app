@@ -28,6 +28,13 @@ flowchart TB
         IC["Image Classifier<br>image_classifier.py"]
         STAB["Text-to-Image<br>stability.py"]
         ADV["Data Views<br>All_Data_Views.py"]
+        FHIR["FHIR → OMOP<br>fhir_omop_demo.py"]
+  end
+ subgraph FHIROMOP["FHIR → OMOP Pipeline"]
+        FLOADER["Loader<br>fhir_loader.py"]
+        FTRANS["Transformers<br>transformers.py"]
+        FANAL["Analytics<br>analytics.py"]
+        FDB["DB helpers<br>pipeline/db.py"]
   end
  subgraph Frontend["Streamlit Frontend Container"]
         MAIN["Main Page<br>app.py"]
@@ -66,7 +73,7 @@ flowchart TB
         STABILITY["Stability AI API<br>SD3 Text-to-Image"]
   end
     BROWSER -- HTTPS --> MAIN
-    MAIN --> CS & PC & GPT & IC & STAB & ADV
+    MAIN --> CS & PC & GPT & IC & STAB & ADV & FHIR
     CS --> AGENT
     AGENT --> PROMPTS & TSCHEMA & TIMPL
     AGENT -- API Call --> OPENAI
@@ -80,6 +87,8 @@ flowchart TB
     BPSAPI -- Startup: download model --> BPSMODEL
     STAB -- API Call --> STABILITY
     ADV --> DBMGR
+    FHIR --> FLOADER & FTRANS & FANAL & FDB
+    FDB --> DBMGR
     GPTTRAIN -. produces model/runtime .-> CUSTOMGPT
     GPTAPI_PROJ -. deploys .-> CUSTOMGPT
     IMGTRAIN -. produces artifact .-> BPSMODEL
@@ -100,6 +109,11 @@ flowchart TB
      IC:::frontend
      STAB:::frontend
      ADV:::frontend
+     FHIR:::frontend
+     FLOADER:::agent
+     FTRANS:::agent
+     FANAL:::agent
+     FDB:::agent
      MAIN:::frontend
      TSCHEMA:::agent
      TIMPL:::agent
@@ -250,6 +264,28 @@ Database visualization dashboard.
 - Support tickets, returns
 - Knowledge base chunks
 
+#### 7. FHIR → OMOP Demo (`fhir_omop_demo.py`)
+Simplified healthcare interoperability demo — loads synthetic FHIR R4 bundles
+into a raw JSONB landing zone, transforms them into an OMOP-inspired
+relational schema, and surfaces analytics, a code-mapping report, and an
+architecture-notes tab.
+
+**Key Features**:
+- Loads either bundled sample data or user-uploaded `.json` Bundles
+- Single-transaction ingest (one Supabase round-trip per click)
+- `st.status` panels with per-step progress and timings
+- Status banner detects "loaded but not yet transformed" state
+- Synthetic data only — no real clinical data, OMOP-*inspired* not OMOP-CDM-compliant
+
+**Architecture**:
+- Pipeline modules under `projects/fhir_omop/pipeline/`
+  - `fhir_loader.py` — Bundle parsing + resource grouping
+  - `transformers.py` — FHIR → OMOP row dicts + mapping report
+  - `db.py` — thin helpers over `DatabaseManager`, plus `bulk_ingest_resources()` single-transaction ingest
+  - `analytics.py` — dashboard SQL
+- All tables live in the public schema with the `fhir_demo_` prefix
+- DDL lives in `database/fhir_omop_sql/`
+
 ### Agentic Support System
 
 #### Customer Support Agent (`chatbot/agent.py`)
@@ -355,6 +391,27 @@ OpenAI GPT-4 powered conversational agent with:
 3. SD3 model generates image
 4. Image returned and cached (Streamlit cache)
 5. Display with download option
+```
+
+### FHIR → OMOP Pipeline Flow
+```
+1. User clicks "Load Sample FHIR Bundles" (or uploads files)
+2. fhir_loader parses each Bundle JSON, groups resources by resourceType
+3. demo_db.bulk_ingest_resources(...) opens ONE Supabase connection and runs:
+   - INSERT into fhir_demo_ingestion_run (open the run)
+   - INSERT VALUES into fhir_demo_raw_fhir_resource (the JSONB landing zone)
+   - UPDATE fhir_demo_ingestion_run (close the run)
+   All three in a single transaction — one round-trip per click.
+4. User clicks "Run Transformation Pipeline"
+5. demo_db.fetch_raw_resources_by_type pulls the landed JSONB back out
+6. transformers map FHIR → OMOP-inspired row dicts; Patients insert first
+   so downstream resources can resolve person_id
+7. Bulk inserts populate person / visit_occurrence / condition_occurrence /
+   measurement / drug_exposure
+8. build_mapping_report_rows generates one row per coded resource
+   indicating whether the source coding system was a recognized standard
+   vocabulary (SNOMED, LOINC, RxNorm, ICD-10)
+9. UI renders metric cards, OMOP tables, mapping report, analytics dashboard
 ```
 
 ## Technology Stack
@@ -472,13 +529,21 @@ resume-app/
 │   └── implementations.py      # Tool logic
 ├── database/                   # Data persistence
 │   ├── db_manager.py           # Database operations
-│   ├── schema.sql              # Table definitions
-│   └── *_insert.sql            # Sample data
+│   ├── schema.sql              # Table definitions (agent_* tables)
+│   ├── *_insert.sql            # Sample data
+│   └── fhir_omop_sql/          # DDL + reset for the FHIR → OMOP demo
+│       ├── 001_create_tables.sql
+│       └── 002_seed_reset.sql
 ├── qdrant/                     # Vector storage
 │   ├── vector_store.py         # RAG Vector operations
 │   ├── vector_load_kb.py       # Vector knowledgebase creation
 │   ├── vector_load_onechunk.py # Vector db single-chunk manipulation
 │   └── chunks.json             # Knowledge base
+├── projects/                   # Self-contained portfolio sub-projects
+│   └── fhir_omop/              # FHIR → OMOP demo
+│       ├── README.md
+│       ├── sample_data/        # Synthetic FHIR R4 Bundles
+│       └── pipeline/           # db / fhir_loader / transformers / analytics
 └── .static/                    # Static assets
     └── architecture.svg        # This diagram
     └── me.jpg                  # Bryce Rodgers selfie
