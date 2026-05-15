@@ -18,11 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 def get_summary_counts(db: DatabaseManager) -> Dict[str, int]:
-    """Counts for the metric cards (patients, encounters, conditions, ...)."""
+    """Counts for the metric cards (patients, encounters, conditions, ...).
+
+    Includes `raw_resources` from the landing zone so the page can detect the
+    'loaded but not transformed' state and surface a hint.
+    """
     counts: Dict[str, int] = {}
     with db.get_connection() as conn:
         with conn.cursor() as cur:
             for label, table in [
+                ("raw_resources",  "fhir_demo_raw_fhir_resource"),
                 ("patients",       "fhir_demo_person"),
                 ("encounters",     "fhir_demo_visit_occurrence"),
                 ("conditions",     "fhir_demo_condition_occurrence"),

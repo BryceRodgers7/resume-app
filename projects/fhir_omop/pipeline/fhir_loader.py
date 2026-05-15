@@ -31,8 +31,22 @@ def iter_resources(bundle: dict) -> Iterable[dict]:
             yield resource
 
 
+def group_bundles_by_resource_type(bundles: Iterable[dict]) -> Dict[str, List[dict]]:
+    """Group resources from a sequence of already-parsed FHIR Bundles.
+
+    Used by both the file-on-disk path (`collect_resources_by_type`) and the
+    in-memory upload path (Streamlit `file_uploader` → `json.loads`).
+    """
+    grouped: Dict[str, List[dict]] = {}
+    for bundle in bundles:
+        for resource in iter_resources(bundle):
+            rtype = resource.get("resourceType", "Unknown")
+            grouped.setdefault(rtype, []).append(resource)
+    return grouped
+
+
 def collect_resources_by_type(bundle_paths: Iterable[Path]) -> Dict[str, List[dict]]:
-    """Parse every bundle and group its resources by `resourceType`.
+    """Parse every bundle file and group its resources by `resourceType`.
 
     Example return shape:
         {
@@ -43,11 +57,8 @@ def collect_resources_by_type(bundle_paths: Iterable[Path]) -> Dict[str, List[di
             "MedicationRequest":  [ .. ],
         }
     """
-    grouped: Dict[str, List[dict]] = {}
+    bundles: List[dict] = []
     for path in bundle_paths:
-        bundle = load_bundle(path)
-        for resource in iter_resources(bundle):
-            rtype = resource.get("resourceType", "Unknown")
-            grouped.setdefault(rtype, []).append(resource)
+        bundles.append(load_bundle(path))
         logger.info("Parsed bundle %s", path.name)
-    return grouped
+    return group_bundles_by_resource_type(bundles)

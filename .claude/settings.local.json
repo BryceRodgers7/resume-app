@@ -7,7 +7,10 @@
       "Bash(python -m pip show pandas)",
       "Bash(python -m pip show numpy)",
       "Bash(python -m pip install --user --force-reinstall \"numpy==1.26.4\" \"pandas==2.1.3\")",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(find .github -type f)",
+      "Bash(ls -la .github)",
+      "Bash(grep -i -E \"\\\\.\\(yml|yaml|toml\\)$|github|gitlab|circleci\")"
     ]
   }
 }

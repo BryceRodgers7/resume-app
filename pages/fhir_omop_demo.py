@@ -6,8 +6,10 @@ OMOP-inspired schema, and renders the result as metrics, tables, and charts.
 
 This is a portfolio familiarity project — not a production OMOP ETL.
 """
+import json
 import logging
 from pathlib import Path
+from typing import List
 
 import streamlit as st
 
@@ -105,14 +107,14 @@ except Exception as e:
 # ---------------------------------------------------------------------------
 col_a, col_b, col_c = st.columns(3)
 with col_a:
-    reset_clicked = st.button("🧹 Reset Demo Data", use_container_width=True)
+    reset_clicked = st.button("🧹 Reset Demo Data", width="stretch")
 with col_b:
     load_clicked = st.button(
-        "📥 Load Sample FHIR Bundles", type="primary", use_container_width=True
+        "📥 Load Sample FHIR Bundles", type="primary", width="stretch"
     )
 with col_c:
     transform_clicked = st.button(
-        "⚙️ Run Transformation Pipeline", use_container_width=True
+        "⚙️ Run Transformation Pipeline", width="stretch"
     )
 
 status_placeholder = st.empty()
@@ -124,25 +126,59 @@ def _run_reset() -> None:
         status_placeholder.success("All `fhir_demo_*` tables truncated.")
 
 
-def _run_load() -> None:
+def _ingest_bundles(bundles: List[dict], source_label: str) -> None:
+    """Land already-parsed FHIR Bundles into fhir_demo_raw_fhir_resource.
+
+    Shared by the sample-data path and the upload path so both produce the
+    same audit trail (one ingestion_run row per click).
+    """
+    grouped = fhir_loader.group_bundles_by_resource_type(bundles)
+    all_resources = [r for rs in grouped.values() for r in rs]
+    if not all_resources:
+        status_placeholder.warning(f"{source_label}: no FHIR resources found.")
+        return
+    run_id = demo_db.start_ingestion_run(
+        db, notes=f"{source_label} ({len(bundles)} bundle(s))"
+    )
+    inserted = demo_db.insert_raw_resources(db, run_id, all_resources)
+    demo_db.complete_ingestion_run(
+        db, run_id, status="loaded",
+        notes=f"Inserted {inserted} raw resources",
+    )
+    status_placeholder.success(
+        f"{source_label} — {len(bundles)} bundle(s), "
+        f"{inserted} raw resources inserted (run #{run_id})."
+    )
+
+
+def _run_sample_load() -> None:
     with st.spinner("Loading sample FHIR bundles..."):
         bundle_paths = fhir_loader.discover_bundle_files(SAMPLE_DATA_DIR)
         if not bundle_paths:
             status_placeholder.warning(f"No bundle files found in {SAMPLE_DATA_DIR}")
             return
-        grouped = fhir_loader.collect_resources_by_type(bundle_paths)
-        all_resources = [r for rs in grouped.values() for r in rs]
-        run_id = demo_db.start_ingestion_run(
-            db, notes=f"Loaded {len(bundle_paths)} bundle file(s)"
-        )
-        inserted = demo_db.insert_raw_resources(db, run_id, all_resources)
-        demo_db.complete_ingestion_run(
-            db, run_id, status="loaded", notes=f"Inserted {inserted} raw resources"
-        )
-        status_placeholder.success(
-            f"Loaded {len(bundle_paths)} bundle file(s) — "
-            f"{inserted} raw resources inserted (run #{run_id})."
-        )
+        bundles = [fhir_loader.load_bundle(p) for p in bundle_paths]
+        _ingest_bundles(bundles, source_label="Loaded sample bundles")
+
+
+def _run_uploaded_load(uploaded_files) -> None:
+    if not uploaded_files:
+        status_placeholder.warning("No files selected.")
+        return
+    with st.spinner(f"Parsing {len(uploaded_files)} uploaded file(s)..."):
+        bundles: List[dict] = []
+        bad: List[str] = []
+        for uf in uploaded_files:
+            try:
+                bundles.append(json.loads(uf.getvalue().decode("utf-8")))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                bad.append(f"{uf.name}: {e}")
+        if bad:
+            status_placeholder.error(
+                "Some uploads could not be parsed as JSON:\n- " + "\n- ".join(bad)
+            )
+            return
+        _ingest_bundles(bundles, source_label="Loaded uploaded bundles")
 
 
 def _run_transform() -> None:
@@ -190,7 +226,7 @@ if reset_clicked:
 
 if load_clicked:
     try:
-        _run_load()
+        _run_sample_load()
     except Exception as e:
         logger.exception("Load failed")
         status_placeholder.error(f"Load failed: {e}")
@@ -202,6 +238,29 @@ if transform_clicked:
         logger.exception("Transform failed")
         status_placeholder.error(f"Transform failed: {e}")
 
+# ---------------------------------------------------------------------------
+# Upload-your-own bundles (alternative to the sample data above).
+# ---------------------------------------------------------------------------
+with st.expander("📤 Or upload your own FHIR Bundle JSON files", expanded=False):
+    st.caption(
+        "Each file must be a FHIR R4 Bundle (JSON) with an `entry` array. "
+        "Resources of types Patient, Encounter, Condition, Observation, and "
+        "MedicationRequest are picked up by the transformer; everything else "
+        "is still landed in the raw table but ignored downstream."
+    )
+    uploaded_files = st.file_uploader(
+        "Drop one or more FHIR Bundle JSON files here",
+        type=["json"],
+        accept_multiple_files=True,
+        key="fhir_upload",
+    )
+    if st.button("📥 Load Uploaded Bundles", width="content", disabled=not uploaded_files):
+        try:
+            _run_uploaded_load(uploaded_files)
+        except Exception as e:
+            logger.exception("Upload load failed")
+            status_placeholder.error(f"Upload load failed: {e}")
+
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -211,13 +270,28 @@ try:
     counts = analytics.get_summary_counts(db)
     mapping_rate = analytics.get_mapping_success_rate(db)
 except Exception as e:
-    counts = {"patients": 0, "encounters": 0, "conditions": 0,
-              "measurements": 0, "drug_exposures": 0}
+    counts = {"raw_resources": 0, "patients": 0, "encounters": 0,
+              "conditions": 0, "measurements": 0, "drug_exposures": 0}
     mapping_rate = None
     st.warning(
         f"Could not load metrics from the database — "
         f"have you run `database/fhir_omop_sql/001_create_tables.sql`? ({e})"
     )
+
+# Pipeline-stage banner: keeps the row of metric cards from looking like a
+# bug when raw data is loaded but the transformation hasn't run yet.
+omop_total = (
+    counts["patients"] + counts["encounters"] + counts["conditions"]
+    + counts["measurements"] + counts["drug_exposures"]
+)
+if counts["raw_resources"] > 0 and omop_total == 0:
+    st.info(
+        f"📥 **{counts['raw_resources']} raw FHIR resource(s) loaded** — "
+        f"click **Run Transformation Pipeline** above to populate the "
+        f"OMOP-inspired tables and the metrics below."
+    )
+elif counts["raw_resources"] > 0:
+    st.caption(f"🗂️ {counts['raw_resources']} raw FHIR resource(s) currently in the landing zone.")
 
 m1, m2, m3, m4, m5, m6 = st.columns(6)
 m1.metric("Patients",              counts["patients"])
@@ -277,7 +351,7 @@ with tab_omop:
             if df.empty:
                 st.info("(empty)")
             else:
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(df, width="stretch", hide_index=True)
         except Exception as e:
             st.error(f"Could not load {table}: {e}")
 
@@ -307,7 +381,7 @@ with tab_mapping:
         if report.empty:
             st.info("Run the transformation pipeline to generate a mapping report.")
         else:
-            st.dataframe(report, use_container_width=True, hide_index=True)
+            st.dataframe(report, width="stretch", hide_index=True)
     except Exception as e:
         st.error(f"Could not load mapping report: {e}")
 
