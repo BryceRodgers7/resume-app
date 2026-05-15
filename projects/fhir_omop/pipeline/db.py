@@ -7,7 +7,8 @@ Streamlit page is responsible for caching the single instance.
 """
 import json
 import logging
-from typing import Dict, Iterable, List, Optional
+import time
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 import psycopg2.extras
@@ -110,6 +111,76 @@ def insert_raw_resources(
             )
         conn.commit()
     return len(rows)
+
+
+def bulk_ingest_resources(
+    db: DatabaseManager,
+    source_label: str,
+    resources: List[dict],
+) -> Tuple[int, int]:
+    """Land FHIR resources in fhir_demo_raw_fhir_resource — single transaction.
+
+    Combines start_ingestion_run + insert_raw_resources + complete_ingestion_run
+    into ONE connection + ONE transaction. This collapses three round-trips
+    to Postgres into one, which is the actual perf win — Supabase connection
+    setup is the bottleneck, not the inserts.
+
+    Returns:
+        (ingestion_run_id, inserted_row_count)
+    """
+    t_open = time.perf_counter()
+    rows = [
+        (None, r.get("resourceType", "Unknown"), json.dumps(r))
+        for r in resources
+    ]
+    n = len(rows)
+    logger.info(
+        "bulk_ingest_resources: %d resource(s) prepared (source=%r) — opening DB connection",
+        n, source_label,
+    )
+
+    with db.get_connection() as conn:
+        t_conn = time.perf_counter()
+        logger.info("bulk_ingest_resources: DB connection open (%.3fs)", t_conn - t_open)
+        with conn.cursor() as cur:
+            # Open the ingestion run row
+            cur.execute(
+                "INSERT INTO fhir_demo_ingestion_run (status, notes) "
+                "VALUES (%s, %s) RETURNING ingestion_run_id",
+                ("in_progress", source_label),
+            )
+            run_id = cur.fetchone()[0]
+            logger.info("bulk_ingest_resources: opened ingestion run #%d", run_id)
+
+            # Insert raw resources, retroactively tagged with the new run_id
+            if n:
+                tagged = [(run_id, rt, body) for (_, rt, body) in rows]
+                psycopg2.extras.execute_values(
+                    cur,
+                    "INSERT INTO fhir_demo_raw_fhir_resource "
+                    "(ingestion_run_id, resource_type, resource_json) VALUES %s",
+                    tagged,
+                )
+                logger.info("bulk_ingest_resources: inserted %d raw resource(s) under run #%d", n, run_id)
+
+            # Close the ingestion run row
+            cur.execute(
+                """
+                UPDATE fhir_demo_ingestion_run
+                SET completed_at = CURRENT_TIMESTAMP,
+                    status       = %s,
+                    notes        = %s
+                WHERE ingestion_run_id = %s
+                """,
+                ("loaded", f"{source_label} — {n} raw resources", run_id),
+            )
+        conn.commit()
+        t_done = time.perf_counter()
+        logger.info(
+            "bulk_ingest_resources: committed run #%d (%d row(s), %.3fs end-to-end)",
+            run_id, n, t_done - t_open,
+        )
+    return run_id, n
 
 
 def fetch_raw_resources_by_type(db: DatabaseManager) -> Dict[str, List[dict]]:

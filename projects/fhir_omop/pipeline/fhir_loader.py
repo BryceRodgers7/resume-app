@@ -14,13 +14,22 @@ logger = logging.getLogger(__name__)
 
 def discover_bundle_files(sample_data_dir: Path) -> List[Path]:
     """Return all *.json files in `sample_data_dir`, sorted for stable order."""
-    return sorted(Path(sample_data_dir).glob("*.json"))
+    paths = sorted(Path(sample_data_dir).glob("*.json"))
+    logger.info("discover_bundle_files: %d file(s) under %s", len(paths), sample_data_dir)
+    for p in paths:
+        logger.debug("  found bundle: %s (%d bytes)", p.name, p.stat().st_size)
+    return paths
 
 
 def load_bundle(bundle_path: Path) -> dict:
     """Parse a single FHIR Bundle JSON file."""
     with open(bundle_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        bundle = json.load(f)
+    logger.info(
+        "load_bundle: parsed %s — %d entry/entries",
+        bundle_path.name, len(bundle.get("entry", []) or []),
+    )
+    return bundle
 
 
 def iter_resources(bundle: dict) -> Iterable[dict]:
@@ -38,10 +47,17 @@ def group_bundles_by_resource_type(bundles: Iterable[dict]) -> Dict[str, List[di
     in-memory upload path (Streamlit `file_uploader` → `json.loads`).
     """
     grouped: Dict[str, List[dict]] = {}
+    bundle_count = 0
     for bundle in bundles:
+        bundle_count += 1
         for resource in iter_resources(bundle):
             rtype = resource.get("resourceType", "Unknown")
             grouped.setdefault(rtype, []).append(resource)
+    summary = {rtype: len(items) for rtype, items in sorted(grouped.items())}
+    logger.info(
+        "group_bundles_by_resource_type: %d bundle(s) → %s",
+        bundle_count, summary,
+    )
     return grouped
 
 

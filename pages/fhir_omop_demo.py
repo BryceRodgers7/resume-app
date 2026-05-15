@@ -8,6 +8,7 @@ This is a portfolio familiarity project — not a production OMOP ETL.
 """
 import json
 import logging
+import time
 from pathlib import Path
 from typing import List
 
@@ -121,30 +122,51 @@ status_placeholder = st.empty()
 
 
 def _run_reset() -> None:
-    with st.spinner("Truncating fhir_demo_* tables..."):
+    logger.info("reset: user clicked Reset Demo Data")
+    t0 = time.perf_counter()
+    with st.status("Truncating `fhir_demo_*` tables...", expanded=False) as s:
         demo_db.reset_demo_data(db)
-        status_placeholder.success("All `fhir_demo_*` tables truncated.")
+        s.update(label=f"All `fhir_demo_*` tables truncated ({time.perf_counter() - t0:.2f}s)",
+                 state="complete")
+    logger.info("reset: complete (%.3fs)", time.perf_counter() - t0)
+    status_placeholder.success("All `fhir_demo_*` tables truncated.")
 
 
-def _ingest_bundles(bundles: List[dict], source_label: str) -> None:
+def _ingest_bundles(bundles: List[dict], source_label: str, status_ui) -> None:
     """Land already-parsed FHIR Bundles into fhir_demo_raw_fhir_resource.
 
     Shared by the sample-data path and the upload path so both produce the
-    same audit trail (one ingestion_run row per click).
+    same audit trail (one ingestion_run row per click) and the same logging
+    surface. All DB writes happen inside a SINGLE transaction
+    (`demo_db.bulk_ingest_resources`) so the click triggers exactly one
+    Supabase round-trip end-to-end — the previous 3-round-trip flow was the
+    cause of the "white screen while it hangs" symptom.
     """
+    status_ui.update(label=f"{source_label}: grouping resources by type...")
+    t_group = time.perf_counter()
     grouped = fhir_loader.group_bundles_by_resource_type(bundles)
     all_resources = [r for rs in grouped.values() for r in rs]
+    logger.info(
+        "ingest: %s — %d bundle(s), %d resource(s) total, grouped in %.3fs",
+        source_label, len(bundles), len(all_resources), time.perf_counter() - t_group,
+    )
+    status_ui.write(f"Grouped **{len(all_resources)}** resource(s) from **{len(bundles)}** bundle(s).")
+
     if not all_resources:
+        status_ui.update(label=f"{source_label}: no FHIR resources found.", state="error")
         status_placeholder.warning(f"{source_label}: no FHIR resources found.")
         return
-    run_id = demo_db.start_ingestion_run(
-        db, notes=f"{source_label} ({len(bundles)} bundle(s))"
+
+    status_ui.update(label=f"{source_label}: writing to Supabase (1 transaction)...")
+    t_db = time.perf_counter()
+    run_id, inserted = demo_db.bulk_ingest_resources(db, source_label, all_resources)
+    elapsed = time.perf_counter() - t_db
+    logger.info(
+        "ingest: %s — wrote run #%d, %d row(s) to fhir_demo_raw_fhir_resource in %.3fs",
+        source_label, run_id, inserted, elapsed,
     )
-    inserted = demo_db.insert_raw_resources(db, run_id, all_resources)
-    demo_db.complete_ingestion_run(
-        db, run_id, status="loaded",
-        notes=f"Inserted {inserted} raw resources",
-    )
+    status_ui.write(f"Inserted **{inserted}** raw resource(s) under run **#{run_id}** ({elapsed:.2f}s).")
+    status_ui.update(label=f"{source_label} — run #{run_id} complete.", state="complete")
     status_placeholder.success(
         f"{source_label} — {len(bundles)} bundle(s), "
         f"{inserted} raw resources inserted (run #{run_id})."
@@ -152,64 +174,132 @@ def _ingest_bundles(bundles: List[dict], source_label: str) -> None:
 
 
 def _run_sample_load() -> None:
-    with st.spinner("Loading sample FHIR bundles..."):
+    logger.info("sample_load: user clicked Load Sample FHIR Bundles")
+    t0 = time.perf_counter()
+    with st.status("Loading sample FHIR bundles...", expanded=True) as s:
+        s.update(label=f"Scanning {SAMPLE_DATA_DIR.name}/ for bundle files...")
         bundle_paths = fhir_loader.discover_bundle_files(SAMPLE_DATA_DIR)
+        s.write(f"Found **{len(bundle_paths)}** bundle file(s).")
         if not bundle_paths:
+            logger.warning("sample_load: no bundle files under %s", SAMPLE_DATA_DIR)
+            s.update(label="No bundle files found.", state="error")
             status_placeholder.warning(f"No bundle files found in {SAMPLE_DATA_DIR}")
             return
+        s.update(label=f"Parsing {len(bundle_paths)} bundle file(s)...")
         bundles = [fhir_loader.load_bundle(p) for p in bundle_paths]
-        _ingest_bundles(bundles, source_label="Loaded sample bundles")
+        _ingest_bundles(bundles, source_label="Loaded sample bundles", status_ui=s)
+    logger.info("sample_load: end-to-end %.3fs", time.perf_counter() - t0)
 
 
 def _run_uploaded_load(uploaded_files) -> None:
+    logger.info(
+        "upload_load: user clicked Load Uploaded Bundles — %d file(s) selected",
+        len(uploaded_files) if uploaded_files else 0,
+    )
     if not uploaded_files:
         status_placeholder.warning("No files selected.")
         return
-    with st.spinner(f"Parsing {len(uploaded_files)} uploaded file(s)..."):
+    t0 = time.perf_counter()
+    with st.status(f"Parsing {len(uploaded_files)} uploaded file(s)...", expanded=True) as s:
         bundles: List[dict] = []
         bad: List[str] = []
         for uf in uploaded_files:
             try:
-                bundles.append(json.loads(uf.getvalue().decode("utf-8")))
+                payload = uf.getvalue()
+                bundle = json.loads(payload.decode("utf-8"))
+                bundles.append(bundle)
+                logger.info(
+                    "upload_load: parsed %s (%d bytes, %d entries)",
+                    uf.name, len(payload), len(bundle.get("entry", []) or []),
+                )
+                s.write(f"Parsed `{uf.name}` — {len(payload):,} bytes, "
+                        f"{len(bundle.get('entry', []) or [])} entries")
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.warning("upload_load: failed to parse %s — %s", uf.name, e)
                 bad.append(f"{uf.name}: {e}")
         if bad:
+            s.update(label="Some uploads could not be parsed as JSON.", state="error")
             status_placeholder.error(
                 "Some uploads could not be parsed as JSON:\n- " + "\n- ".join(bad)
             )
             return
-        _ingest_bundles(bundles, source_label="Loaded uploaded bundles")
+        _ingest_bundles(bundles, source_label="Loaded uploaded bundles", status_ui=s)
+    logger.info("upload_load: end-to-end %.3fs", time.perf_counter() - t0)
 
 
 def _run_transform() -> None:
-    with st.spinner("Transforming raw FHIR resources into OMOP-inspired tables..."):
+    logger.info("transform: user clicked Run Transformation Pipeline")
+    t0 = time.perf_counter()
+    with st.status("Running transformation pipeline...", expanded=True) as s:
+        s.update(label="Reading raw resources from Supabase...")
+        t = time.perf_counter()
         grouped = demo_db.fetch_raw_resources_by_type(db)
+        logger.info(
+            "transform: fetched raw resources in %.3fs — %s",
+            time.perf_counter() - t,
+            {k: len(v) for k, v in grouped.items()},
+        )
         if not grouped:
+            logger.warning("transform: no raw resources to transform")
+            s.update(label="No raw resources found.", state="error")
             status_placeholder.warning(
                 "No raw resources found. Click **Load Sample FHIR Bundles** first."
             )
             return
 
-        # Insert persons first so downstream resources can resolve person_id
+        s.write(f"Read {sum(len(v) for v in grouped.values())} raw resource(s) "
+                f"across {len(grouped)} resource type(s).")
+
+        # Persons first so downstream resources can resolve person_id
+        s.update(label="Inserting persons...")
+        t = time.perf_counter()
         person_rows = [transformers.transform_patient(p) for p in grouped.get("Patient", [])]
         person_lookup = demo_db.insert_persons(db, person_rows)
+        logger.info(
+            "transform: inserted %d person(s) in %.3fs",
+            len(person_lookup), time.perf_counter() - t,
+        )
+        s.write(f"Inserted **{len(person_lookup)}** person(s).")
 
         def _transform_many(resources, fn):
             return [row for row in (fn(r, person_lookup) for r in resources) if row is not None]
 
+        s.update(label="Transforming clinical events...")
         visits     = _transform_many(grouped.get("Encounter", []),         transformers.transform_encounter)
         conditions = _transform_many(grouped.get("Condition", []),         transformers.transform_condition)
         measures   = _transform_many(grouped.get("Observation", []),       transformers.transform_observation)
         drugs      = _transform_many(grouped.get("MedicationRequest", []), transformers.transform_medication_request)
+        logger.info(
+            "transform: built rows — visits=%d, conditions=%d, measures=%d, drugs=%d",
+            len(visits), len(conditions), len(measures), len(drugs),
+        )
 
+        s.update(label="Writing clinical events to Supabase...")
+        t = time.perf_counter()
         n_v = demo_db.insert_visits(db, visits)
         n_c = demo_db.insert_conditions(db, conditions)
         n_m = demo_db.insert_measurements(db, measures)
         n_d = demo_db.insert_drug_exposures(db, drugs)
+        logger.info(
+            "transform: inserted v=%d c=%d m=%d d=%d in %.3fs",
+            n_v, n_c, n_m, n_d, time.perf_counter() - t,
+        )
+        s.write(f"Inserted **{n_v}** visits, **{n_c}** conditions, "
+                f"**{n_m}** measurements, **{n_d}** drug exposures.")
 
+        s.update(label="Writing code mapping report...")
+        t = time.perf_counter()
         mapping_rows = transformers.build_mapping_report_rows(grouped)
         demo_db.insert_mapping_reports(db, mapping_rows)
+        logger.info(
+            "transform: inserted %d mapping report row(s) in %.3fs",
+            len(mapping_rows), time.perf_counter() - t,
+        )
+        s.write(f"Inserted **{len(mapping_rows)}** mapping report row(s).")
 
+        elapsed = time.perf_counter() - t0
+        s.update(label=f"Transformation complete ({elapsed:.2f}s).", state="complete")
+        logger.info("transform: end-to-end %.3fs", elapsed)
         status_placeholder.success(
             f"Transformation complete — {len(person_lookup)} persons, "
             f"{n_v} visits, {n_c} conditions, {n_m} measurements, "
