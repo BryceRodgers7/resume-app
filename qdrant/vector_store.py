@@ -37,33 +37,35 @@ class VectorStore:
                     url=self.url,
                     api_key=self.api_key,
                 )
-                self._initialize_collection()
+                self._verify_collection()
                 # Lazy load embedder - only initialize when first search happens
                 self.embedder = None
             except Exception as e:
                 print(f"Error connecting to Qdrant: {e}")
                 self.client = None
                 self.embedder = None
-    
-    def _initialize_collection(self):
-        """Initialize collection if it doesn't exist."""
+
+    def _verify_collection(self):
+        """Warn if the configured collection does not exist.
+
+        Collection creation is the responsibility of `qdrant/vector_load_kb.py`,
+        which sizes the vector params from the actual embedder
+        (BAAI/bge-small-en-v1.5 → 384 dims). Auto-creating here previously used
+        a hardcoded 1536 (OpenAI legacy) which would silently produce a
+        collection incompatible with the embedder used at query time.
+        """
         if not self.client:
             return
-        
         try:
-            # Check if collection exists
             collections = self.client.get_collections()
             collection_names = [col.name for col in collections.collections]
-            
             if self.collection_name not in collection_names:
-                # Create collection with 1536 dimensions (OpenAI embedding size)
-                self.client.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+                print(
+                    f"Warning: Qdrant collection '{self.collection_name}' does not exist. "
+                    f"Run `python -m qdrant.vector_load_kb` to create and populate it."
                 )
-                print(f"Created Qdrant collection: {self.collection_name}")
         except Exception as e:
-            print(f"Error initializing collection: {e}")
+            print(f"Error verifying Qdrant collection: {e}")
     
     def search(self, query_vector: List[float], limit: int = 5, 
                score_threshold: float = 0.7) -> List[Dict[str, Any]]:

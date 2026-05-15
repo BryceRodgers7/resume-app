@@ -41,13 +41,11 @@ When prompted:
 ⚠️ **IMPORTANT**: Set these before your first deployment!
 
 ```bash
-# OpenAI API Key
+# OpenAI API Key (support agent, pirate chatbot, vector embeddings)
 flyctl secrets set OPENAI_API_KEY="your-openai-api-key-here"
 
-# Supabase Database
-flyctl secrets set DATABASE_URL="postgresql://user:password@host:port/database"
-flyctl secrets set SUPABASE_URL="https://your-project.supabase.co"
-flyctl secrets set SUPABASE_KEY="your-supabase-anon-key"
+# Supabase PostgreSQL (full DSN — psycopg2 connection string)
+flyctl secrets set SUPADATABASE_URL="postgresql://user:password@host:port/database"
 
 # Qdrant Vector Database
 flyctl secrets set QDRANT_URL="https://your-cluster.qdrant.io"
@@ -57,7 +55,15 @@ flyctl secrets set QDRANT_API_KEY="your-qdrant-api-key"
 flyctl secrets set STABILITY_KEY="your-stability-ai-key"
 
 # Custom GPT API (Google Cloud Run)
-flyctl secrets set BRYCEGPT_API_URL="https://your-service.run.app"
+flyctl secrets set BRYCEGPT_API_URL="https://your-gpt-service.run.app"
+
+# Image Classifier API (Google Cloud Run)
+flyctl secrets set BPSIMGCLSS_API_URL="https://your-classifier-service.run.app"
+
+# Optional: override root log level (defaults to INFO)
+# flyctl secrets set LOG_LEVEL="DEBUG"
+# Optional: override image-classifier read-timeout (seconds, defaults to 120)
+# flyctl secrets set BPSIMGCLSS_TIMEOUT="180"
 ```
 
 To view set secrets (values are hidden):

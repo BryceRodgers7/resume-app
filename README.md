@@ -4,11 +4,12 @@ A Streamlit-based portfolio app showcasing various AI/ML projects and demos.
 
 ## 🚀 Features
 
-- **Customer Support Chatbot**: Agentic customer support system
-- **Custom GPT Model**: 11M parameter GPT model trained from scratch
-- **Text-to-Image Generator**: Using Stability AI's API
-- **Image Classifier**: Custom-trained image classification model
-- **Simple Chatbot**: Interactive chatbot with editable system prompts
+- **Agentic Customer Support**: GPT-4 agent with function calling, PostgreSQL tools, and RAG via Qdrant
+- **Custom GPT Models**: 10M parameter decoder-only transformers (Shakespeare + Voyager) served via Cloud Run
+- **Image Classifier**: Fine-tuned ResNet50 (bird / plane / superman / other) served via Cloud Run
+- **Text-to-Image**: Stability AI SD3 integration
+- **Pirate Chatbot**: GPT-3.5-turbo with a live-editable system prompt to demonstrate prompt engineering
+- **Architecture View**: Interactive zoomable diagram of the full serverless stack
 
 ## 📦 Installation
 
@@ -23,13 +24,10 @@ cd resume-app
 pip install -r requirements.txt
 ```
 
-3. Set up your secrets (optional, for API keys):
-Create a `.streamlit/secrets.toml` file:
-```toml
-OPENAI_API_KEY = "your-openai-key"
-STABILITY_API_KEY = "your-stability-key"
-ANTHROPIC_API_KEY = "your-anthropic-key"
-```
+3. Set up environment variables (see [environment variables](#-environment-variables) below).
+   For local development you can either set them in your shell or copy
+   `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and load them
+   via `python-dotenv` / your launch config. `secrets.toml` is in `.gitignore`.
 
 ## 🏃 Running the App
 
@@ -41,73 +39,101 @@ The app will open in your browser at `http://localhost:8501`
 
 ## 🔧 Development
 
-### Training the Image Classifier
+### Pages
 
-The image classifier can identify **birds**, **planes**, **Superman**, and **other** objects!
+Each page lives in `pages/` and is registered in `nav.py`:
 
-To train your custom model:
+| File | Route | Purpose |
+| --- | --- | --- |
+| `pages/support_agent.py` | Support Agent | GPT-4 agent + tools + RAG |
+| `pages/image_classifier.py` | Image Classifier | Calls remote ResNet50 inference API |
+| `pages/pirate_chatbot.py` | Pirate Chatbot | GPT-3.5-turbo with editable system prompt |
+| `pages/stability.py` | Stability | Stability AI SD3 text-to-image |
+| `pages/voyager_gpt.py` | Voyager GPT | Calls remote custom-GPT inference API |
+| `pages/architecture.py` | Architecture | Renders the zoomable SVG diagram |
 
-1. **Create dataset structure:**
-   ```bash
-   cd model_tuning
-   python download_sample_data.py
-   ```
+The home page is defined in `app.py` (`home_page()`), passed into
+`nav.config_navigation()` so every page renders the same nav. Pages also
+`from app import home_page` so navigation works whether the user enters via
+`app.py` or any individual page URL.
 
-2. **Add training images** to `model_tuning/dataset/train/<category>/`
-   - Add validation images to `model_tuning/dataset/val/<category>/`
-   - Recommended: 50-100+ images per category for training
-   - Recommended: 10-20+ images per category for validation
+### Supporting / Upstream Projects
 
-3. **Train the model:**
-   ```bash
-   python train_classifier.py
-   ```
+The training pipelines for the deployed models live in separate repos and are
+no longer part of this codebase:
 
-4. **Test the model:**
-   ```bash
-   python test_model.py
-   ```
+- **Image classifier training** — <https://github.com/BryceRodgers7/img-classifier-birdplanesuper>
+- **Custom GPT training** — <https://github.com/BryceRodgers7/brycegpt>
 
-5. **Use in the app** - The model will be automatically loaded by the Image Classifier page!
-
-See `model_tuning/README.md` for detailed instructions.
-
-### Adding Your Existing Code
-
-Each demo page is located in the `pages/` directory:
-- `pages/customer_support.py` - Customer support chatbot
-- `pages/gpt_model.py` - GPT model demo
-- `pages/stability.py` - Text-to-image generator
-- `pages/image_classifier.py` - Image classifier (now fully functional!)
-- `pages/pirate_chatbot.py` - Pirate-themed chatbot
-
-Simply replace the placeholder code in each file with your existing implementations.
+The trained image-classifier artifact (`models/*.pth`) is committed for
+reference but the deployed model is downloaded from GCS by the Cloud Run
+service at startup. This app does not load the `.pth` directly.
 
 ### Project Structure
 
 ```
 resume-app/
-├── app.py                  # Main application with navigation
-├── pages/                  # Individual page modules
-│   ├── __init__.py
-│   ├── about_me.py
-│   ├── customer_support.py
-│   ├── gpt_model.py
-│   ├── stability.py
+├── app.py                       # Main entry — defines home page + delegates to nav
+├── nav.py                       # Streamlit page registration (st.navigation)
+├── Dockerfile                   # Production container
+├── fly.toml                     # Fly.io deployment config
+├── requirements.txt             # Python dependencies (PyTorch installed via Dockerfile)
+├── pages/                       # Sidebar-visible pages
+│   ├── support_agent.py
 │   ├── image_classifier.py
-│   └── pirate_chatbot.py
-├── model_tuning/          # Model training scripts
-│   ├── train_classifier.py
-│   ├── download_sample_data.py
-│   ├── test_model.py
-│   ├── README.md
-│   └── dataset/          # Training data goes here
-├── models/                # Trained models
-├── requirements.txt       # Python dependencies
-├── .streamlit/           # Streamlit configuration (create if needed)
-│   └── secrets.toml      # API keys and secrets
-└── README.md             # This file
+│   ├── pirate_chatbot.py
+│   ├── stability.py
+│   ├── voyager_gpt.py
+│   └── architecture.py
+├── views/                       # Pages reached only via in-app links (no sidebar)
+│   └── All_Data_Views.py
+├── chatbot/                     # Customer support agent
+│   ├── agent.py                 # OpenAI loop + tool execution
+│   └── prompts.py               # SYSTEM_PROMPT, WELCOME_MESSAGE
+├── tools/                       # Agent tool layer
+│   ├── schemas.py               # OpenAI function-call schemas
+│   └── implementations.py       # Tool bodies — DB + vector calls
+├── database/                    # PostgreSQL (Supabase) access
+│   ├── db_manager.py            # Connection + queries
+│   ├── schema.sql               # Table DDL (agent_* tables)
+│   └── *_insert.sql             # Seed data
+├── qdrant/                      # Vector DB (knowledge base)
+│   ├── vector_store.py          # Search interface used by the agent
+│   ├── vector_load_kb.py        # Bulk-load chunks.json into Qdrant
+│   ├── vector_load_onechunk.py  # Single-chunk upsert helper
+│   └── chunks.json              # Knowledge-base source content
+├── components/
+│   └── svg_viewer.py            # Zoomable/fullscreen SVG component
+├── models/                      # Reference copy of trained classifier artifact
+├── .static/                     # Images served by Streamlit (architecture.svg, me.jpg, parrot.jpg)
+├── .streamlit/
+│   └── secrets.toml.example     # Template — copy to secrets.toml for local dev
+├── ARCHITECTURE.md              # System design + diagram
+├── DEPLOYMENT.md                # Fly.io deployment guide
+└── QUICKSTART_DEPLOYMENT.md     # 5-minute deploy walkthrough
 ```
+
+### 🔑 Environment Variables
+
+Required for full functionality (set as Fly secrets in production, or via
+shell/`secrets.toml` locally):
+
+| Variable | Used by | Purpose |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | support agent, pirate chatbot, vector store | OpenAI access |
+| `SUPADATABASE_URL` | `database/db_manager.py` | PostgreSQL connection string (Supabase) |
+| `QDRANT_URL` | `qdrant/vector_store.py` | Qdrant Cloud endpoint |
+| `QDRANT_API_KEY` | `qdrant/vector_store.py` | Qdrant Cloud auth |
+| `STABILITY_KEY` | `pages/stability.py` | Stability AI SD3 |
+| `BRYCEGPT_API_URL` | `pages/voyager_gpt.py` | Cloud Run URL for the custom-GPT service |
+| `BPSIMGCLSS_API_URL` | `pages/image_classifier.py` | Cloud Run URL for the image-classifier service |
+
+Optional:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `LOG_LEVEL` | `INFO` | Root logger level (`DEBUG`, `INFO`, `WARNING`, …) |
+| `BPSIMGCLSS_TIMEOUT` | `120` | Read-timeout (seconds) for image classifier API |
 
 ## 🌐 Deployment
 
@@ -160,7 +186,7 @@ For detailed instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ### Update Personal Information
 
-Edit `app.py` and `pages/home.py` to update:
+Edit `app.py` (specifically the `home_page()` function) to update:
 - Your name
 - GitHub URL
 - Business website URL
@@ -169,9 +195,10 @@ Edit `app.py` and `pages/home.py` to update:
 
 ### Add More Pages
 
-1. Create a new file in `pages/` directory
-2. Define a `show()` function
-3. Add navigation option in `app.py`
+1. Create a new file in `pages/` (top-level) or `views/` (no sidebar entry).
+2. At the top, set the Streamlit page config and call
+   `nav.config_navigation(home_page)` so the page renders with the same nav.
+3. Register the page in `nav.py` inside `config_navigation()` with an `st.Page(...)` entry.
 
 ## 🐛 Troubleshooting
 

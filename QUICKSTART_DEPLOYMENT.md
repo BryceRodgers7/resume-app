@@ -44,23 +44,24 @@ Answer the prompts:
 Replace the placeholder values with your actual credentials:
 
 ```bash
-# Required: OpenAI
+# Required: OpenAI (support agent + pirate chatbot + vector embeddings)
 flyctl secrets set OPENAI_API_KEY="sk-..."
 
-# Required: Supabase
-flyctl secrets set DATABASE_URL="postgresql://..."
-flyctl secrets set SUPABASE_URL="https://..."
-flyctl secrets set SUPABASE_KEY="..."
+# Required: Supabase PostgreSQL (full psycopg2 DSN)
+flyctl secrets set SUPADATABASE_URL="postgresql://..."
 
-# Required: Qdrant
+# Required: Qdrant Cloud
 flyctl secrets set QDRANT_URL="https://..."
 flyctl secrets set QDRANT_API_KEY="..."
 
-# Optional: Stability AI (for text-to-image)
+# Optional: Stability AI (text-to-image page)
 flyctl secrets set STABILITY_KEY="..."
 
-# Optional: Custom GPT
+# Optional: Custom GPT inference service (Voyager GPT page)
 flyctl secrets set BRYCEGPT_API_URL="https://..."
+
+# Optional: Image classifier inference service (Image Classifier page)
+flyctl secrets set BPSIMGCLSS_API_URL="https://..."
 ```
 
 ## Step 5: Deploy!

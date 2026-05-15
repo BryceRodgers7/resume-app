@@ -203,7 +203,7 @@ flowchart TB
 
 ### Application Pages
 
-#### 1. Customer Support Chatbot (`customer_support.py`)
+#### 1. Customer Support Chatbot (`support_agent.py`)
 Full agentic AI system with function calling capabilities.
 
 **Key Features**:
@@ -225,17 +225,18 @@ Simple conversational AI with customizable system prompts.
 - Demonstrates prompt engineering
 - Streaming responses
 
-#### 3. Custom GPT Model (`gpt_model.py`)
-Interface to custom-trained 10M parameter GPT model.
+#### 3. Custom GPT Model (`voyager_gpt.py`)
+Interface to custom-trained 10M parameter GPT models (Shakespeare + Voyager).
 - Deployed on Google Cloud Run
 - Character-level text generation
-- Configurable parameters: seed, temperature, max_tokens
+- Configurable parameters: model, seed, temperature, max_tokens, context
+- Training pipeline lives in [brycegpt](https://github.com/BryceRodgers7/brycegpt)
 
 #### 4. Image Classifier (`image_classifier.py`)
-PyTorch ResNet18 transfer learning classifier.
+PyTorch ResNet50 transfer-learning classifier (frontend only — inference is remote).
 - Classes: bird, plane, superman, other
-- Confidence thresholding for "other" detection
-- Custom training pipeline in `model_tuning/`
+- Confidence thresholding + entropy analysis for "other" detection
+- Training pipeline lives in [img-classifier-birdplanesuper](https://github.com/BryceRodgers7/img-classifier-birdplanesuper)
 
 #### 5. Text-to-Image Generator (`stability.py`)
 Stability AI SD3 integration.
@@ -426,23 +427,26 @@ OpenAI GPT-4 powered conversational agent with:
 
 ### Environment Variables Required
 ```bash
-# OpenAI
+# OpenAI (support agent, pirate chatbot, vector embeddings)
 OPENAI_API_KEY=<key>
 
-# Supabase
-DATABASE_URL=<connection-string>
-SUPABASE_URL=<url>
-SUPABASE_KEY=<key>
+# Supabase PostgreSQL (full DSN — psycopg2 connection string)
+SUPADATABASE_URL=<connection-string>
 
-# Qdrant
+# Qdrant Cloud (vector knowledge base)
 QDRANT_URL=<url>
 QDRANT_API_KEY=<key>
 
-# Stability AI
+# Stability AI (text-to-image)
 STABILITY_KEY=<key>
 
-# Custom GPT
-BRYCEGPT_API_URL=<cloud-run-url>
+# Cloud Run backends
+BRYCEGPT_API_URL=<cloud-run-url>     # custom GPT inference
+BPSIMGCLSS_API_URL=<cloud-run-url>   # image-classifier inference
+
+# Optional
+LOG_LEVEL=INFO            # root logger level
+BPSIMGCLSS_TIMEOUT=120    # image classifier read-timeout seconds
 ```
 
 ## File Structure

@@ -18,8 +18,8 @@ nav.config_navigation(home_page)
 st.title("🏗️ Portfolio App Architecture")
 
 st.markdown("""
-The diagram below shows the complete **serverless/cloud-native** architecture of my Portfolio 
-application, including deployment infrastructure, upstream delivery projectsapplication components, and external services.
+The diagram below shows the complete **serverless/cloud-native** architecture of my Portfolio
+application, including deployment infrastructure, upstream delivery projects, application components, and external services.
             
 See below the diagram for more details.
 
