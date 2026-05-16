@@ -10,6 +10,11 @@ All components are hosted on managed cloud services with automatic scaling and n
 ---
 config:
   layout: dagre
+  theme: base
+  themeVariables:
+    clusterBkg: '#F9F9FB'
+    clusterBorder: '#BDBCCC'
+    background: '#FFFFFF'
 ---
 flowchart TB
  subgraph User["👤 User Layer"]
@@ -28,7 +33,7 @@ flowchart TB
         IC["Image Classifier<br>image_classifier.py"]
         STAB["Text-to-Image<br>stability.py"]
         ADV["Data Views<br>All_Data_Views.py"]
-        FHIR["FHIR → OMOP<br>fhir_omop_demo.py"]
+        FHIR["FHIR → OMOP<br>fhir_omop.py"]
   end
  subgraph FHIROMOP["FHIR → OMOP Pipeline"]
         FLOADER["Loader<br>fhir_loader.py"]
@@ -112,8 +117,8 @@ flowchart TB
      FHIR:::frontend
      FLOADER:::agent
      FTRANS:::agent
-     FANAL:::agent
-     FDB:::agent
+     FANAL:::data
+     FDB:::data
      MAIN:::frontend
      TSCHEMA:::agent
      TIMPL:::agent

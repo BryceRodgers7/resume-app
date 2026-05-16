@@ -10,7 +10,11 @@
       "Bash(python *)",
       "Bash(find .github -type f)",
       "Bash(ls -la .github)",
-      "Bash(grep -i -E \"\\\\.\\(yml|yaml|toml\\)$|github|gitlab|circleci\")"
+      "Bash(grep -i -E \"\\\\.\\(yml|yaml|toml\\)$|github|gitlab|circleci\")",
+      "Bash(awk '{print $1, $2}')",
+      "Bash(awk 'BEGIN{maxx=0; maxy=0} {if \\($1>maxx\\) maxx=$1; if \\($2>maxy\\) maxy=$2} END{print \"max-x:\", maxx, \" max-y:\", maxy}')",
+      "Bash(awk -F'[=\"]' '{print $2, $5}')",
+      "Bash(awk -F'\"' '{print $2}')"
     ]
   }
 }
