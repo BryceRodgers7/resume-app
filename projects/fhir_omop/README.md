@@ -4,10 +4,19 @@ A **simplified healthcare interoperability demo** that lives inside the
 existing Streamlit portfolio app. It loads **synthetic FHIR R4** patient
 bundles, transforms them into an **OMOP-inspired** relational schema in the
 shared Supabase/Postgres database, and renders the result as metrics, tables,
-charts, and a code-mapping report.
+charts, a code-mapping report, and a **Clinical Terminology Explorer**.
 
 This is a **FHIR familiarity project** — not production OMOP CDM, not
 certified interoperability, and not validated for clinical use.
+
+This demo includes a **Clinical Terminology Explorer** that identifies common
+terminology systems in FHIR resources, including **LOINC**, **SNOMED CT**,
+**ICD-10-CM**, and **RxNorm**. It uses a **curated subset** of mappings to
+show how coded clinical concepts flow into OMOP-inspired target tables.
+**MeSH** is included as an educational reference for biomedical literature
+indexing, but is not used directly in the transformation pipeline. No real
+terminology server is integrated and no full vocabulary distribution is
+downloaded — this is for portfolio illustration only.
 
 ## What this demonstrates
 
@@ -40,6 +49,13 @@ certified interoperability, and not validated for clinical use.
   grouping, DB connect, run open/close, row counts, and per-step
   `perf_counter` elapsed are logged at INFO level. Useful for diagnosing
   network or Supabase slowness after the fact.
+- **Clinical Terminology Explorer** — extracts every coding from the
+  currently-loaded FHIR resources, classifies each `(system, code)` pair as
+  *mapped* / *system-known-code-unknown* / *unsupported* / *missing*, and
+  surfaces summary metrics, a filterable table, a per-code detail view, and
+  educational reference cards for LOINC, SNOMED CT, ICD-10-CM, RxNorm, and
+  MeSH. Powered by a curated mapping table in `pipeline/terminology.py` —
+  no terminology server, no licensed downloads.
 
 ## Architecture
 
@@ -83,7 +99,11 @@ projects/fhir_omop/
     ├── fhir_loader.py              # parse Bundle JSON, group resources by type
     │                               # (group_bundles_by_resource_type works on
     │                               # already-parsed bundles for the upload path)
+    ├── terminology.py              # curated terminology metadata + demo code
+    │                               # mappings; classify_coding() + build_terminology_rows()
+    │                               # power both the explorer tab and the mapping report
     ├── transformers.py             # FHIR → OMOP-inspired row dicts + mapping report
+    │                               # (delegates classification to terminology.py)
     └── analytics.py                # SQL behind the dashboard metrics/charts
 
 database/fhir_omop_sql/
@@ -126,14 +146,23 @@ No new dependencies are introduced — everything required already ships in
    loaded — click Run Transformation Pipeline*". Click it.
 6. **Run Transformation Pipeline** reads the raw resources back out,
    populates the OMOP-inspired tables, and generates the mapping report.
-7. Browse the tabs: raw resources, curated tables, mapping report,
-   analytics dashboard, architecture notes.
+7. Browse the tabs: raw resources, **Clinical Terminology Explorer**,
+   curated OMOP-inspired tables, code mapping report, analytics dashboard,
+   architecture notes.
 
 ## Limitations (by design)
 
 - **OMOP-inspired, not OMOP CDM.** No `concept_id` resolution, no
   vocabulary tables, no `concept_relationship`. Real OHDSI workflows
   resolve every source code through the OMOP vocabulary tables.
+- **Curated terminology only.** The Clinical Terminology Explorer ships
+  with a hand-built mapping for a small set of LOINC / SNOMED CT /
+  ICD-10-CM / RxNorm codes covering the sample data. Production systems
+  use full vocabulary tables (OHDSI Athena, UMLS, NLM RxNorm),
+  licensed terminology distributions, or terminology servers
+  (HL7 TS, SNOMED Snowstorm, LOINC FHIR endpoints). MeSH is included as
+  educational reference only — it indexes literature, not clinical events,
+  so the pipeline does not consume it.
 - **Happy-path FHIR only.** No validation, no reference resolution beyond
   `subject`, no handling of FHIR datatypes other than `valueQuantity` on
   Observations.

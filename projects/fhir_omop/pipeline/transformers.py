@@ -14,18 +14,16 @@ import logging
 from datetime import date, datetime
 from typing import Dict, List, Optional, Tuple
 
+from projects.fhir_omop.pipeline import terminology
+
 logger = logging.getLogger(__name__)
 
 
-# Recognized standard coding systems. The mapping report flags any resource
-# whose CodeableConcept uses a system NOT in this table as "unmapped".
+# Kept for backwards compatibility — the source-of-truth for recognized
+# systems now lives in `terminology.TERMINOLOGY_SYSTEMS`. This view exists
+# so existing callers and tests don't break.
 RECOGNIZED_CODING_SYSTEMS: Dict[str, str] = {
-    "http://snomed.info/sct":                       "SNOMED CT",
-    "http://loinc.org":                             "LOINC",
-    "http://www.nlm.nih.gov/research/umls/rxnorm":  "RxNorm",
-    "http://hl7.org/fhir/sid/icd-10":               "ICD-10",
-    "http://hl7.org/fhir/sid/icd-10-cm":            "ICD-10-CM",
-    "http://hl7.org/fhir/sid/icd-9-cm":             "ICD-9-CM",
+    url: meta["name"] for url, meta in terminology.TERMINOLOGY_SYSTEMS.items()
 }
 
 
@@ -174,32 +172,19 @@ def build_mapping_report_row(
 ) -> dict:
     """One row of fhir_demo_code_mapping_report.
 
-    Considered a "successful mapping" iff the source coding system is one of
-    the recognized standard vocabularies. This is a presence-check stand-in
-    for real concept-id resolution.
+    Delegates to :func:`terminology.classify_coding` so the report agrees
+    with the Clinical Terminology Explorer on what counts as 'mapped' and
+    distinguishes the four statuses: ``mapped``, ``system_known_code_unknown``,
+    ``unsupported_system``, ``missing``. The ``mapped_successfully`` boolean
+    is preserved as the row-level summary the metric card reads.
     """
-    if coding_system and coding_system in RECOGNIZED_CODING_SYSTEMS:
-        return {
-            "resource_type":       resource_type,
-            "source_code":         source_code,
-            "coding_system":       coding_system,
-            "mapped_successfully": True,
-            "notes":               f"Recognized as {RECOGNIZED_CODING_SYSTEMS[coding_system]}",
-        }
-    if not coding_system:
-        return {
-            "resource_type":       resource_type,
-            "source_code":         source_code,
-            "coding_system":       None,
-            "mapped_successfully": False,
-            "notes":               "No coding system supplied on the resource",
-        }
+    classification = terminology.classify_coding(coding_system, source_code)
     return {
         "resource_type":       resource_type,
         "source_code":         source_code,
         "coding_system":       coding_system,
-        "mapped_successfully": False,
-        "notes":               "Unknown / non-standard coding system",
+        "mapped_successfully": classification["mapped_successfully"],
+        "notes":               classification["notes"],
     }
 
 

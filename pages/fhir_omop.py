@@ -10,14 +10,16 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import streamlit as st
 
 import nav
 from app import home_page
 from database.db_manager import DatabaseManager
-from projects.fhir_omop.pipeline import analytics, fhir_loader, transformers
+import pandas as pd
+
+from projects.fhir_omop.pipeline import analytics, fhir_loader, terminology, transformers
 from projects.fhir_omop.pipeline import db as demo_db
 
 logger = logging.getLogger(__name__)
@@ -396,8 +398,9 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
-tab_raw, tab_omop, tab_mapping, tab_analytics, tab_arch = st.tabs([
+tab_raw, tab_term, tab_omop, tab_mapping, tab_analytics, tab_arch = st.tabs([
     "📄 Raw FHIR Resources",
+    "🧠 Clinical Terminology Explorer",
     "🗄️ OMOP-Inspired Tables",
     "🔗 Code Mapping Report",
     "📊 Analytics Dashboard",
@@ -420,6 +423,170 @@ with tab_raw:
                 for i, resource in enumerate(raw[rtype], start=1):
                     st.caption(f"{rtype} #{i} — id: {resource.get('id', '(no id)')}")
                     st.json(resource, expanded=False)
+
+# ----- Clinical Terminology Explorer ---------------------------------------
+with tab_term:
+    st.markdown("#### Clinical Terminology Explorer")
+    st.markdown(
+        """
+        FHIR defines the **structure** of exchanged healthcare data; clinical
+        terminologies define the **meaning** of the coded concepts inside it.
+        This view extracts every coding from the raw FHIR resources currently
+        loaded and shows how common standards — LOINC, SNOMED CT, ICD-10 /
+        ICD-10-CM, and RxNorm — map into the OMOP-inspired target tables.
+        """
+    )
+
+    # Pull raw resources and build terminology rows (in-memory; no new tables).
+    try:
+        raw_grouped = demo_db.fetch_raw_resources_by_type(db)
+    except Exception as e:
+        raw_grouped = {}
+        st.error(f"Could not read raw resources: {e}")
+
+    all_raw = [r for rs in raw_grouped.values() for r in rs]
+    term_rows = terminology.build_terminology_rows(all_raw)
+
+    if not term_rows:
+        st.info(
+            "No coded resources loaded yet. Click **Load Sample FHIR Bundles** "
+            "(or upload your own bundles) above to populate this view."
+        )
+    else:
+        # ---- Summary metric cards -----------------------------------------
+        summary = terminology.summarize_terminology_rows(term_rows)
+        t1, t2, t3, t4, t5 = st.columns(5)
+        t1.metric("Total coded concepts",      summary["total_codings"])
+        t2.metric("Known terminology systems", summary["known_systems"])
+        t3.metric("Mapped demo codes",         summary["mapped"])
+        t4.metric("Unsupported systems",       summary["unsupported"])
+        t5.metric("Missing / unknown codes",   summary["missing_or_unknown"])
+
+        # ---- Filters ------------------------------------------------------
+        df = pd.DataFrame(term_rows)
+        all_systems   = sorted(df["terminology_name"].dropna().unique().tolist())
+        all_resources = sorted(df["resource_type"].dropna().unique().tolist())
+
+        f1, f2, f3, f4 = st.columns([1.2, 1.2, 1.2, 2])
+        with f1:
+            sel_systems = st.multiselect(
+                "Terminology system", all_systems, default=all_systems,
+                key="term_sys_filter",
+            )
+        with f2:
+            sel_resources = st.multiselect(
+                "Resource type", all_resources, default=all_resources,
+                key="term_res_filter",
+            )
+        with f3:
+            sel_status = st.selectbox(
+                "Mapping status",
+                ["All", "Mapped only", "Unmapped only"],
+                key="term_status_filter",
+            )
+        with f4:
+            text_q = st.text_input(
+                "Search code or display", "",
+                placeholder="e.g. 4548-4 or hypertension",
+                key="term_search",
+            )
+
+        filtered = df[
+            df["terminology_name"].isin(sel_systems)
+            & df["resource_type"].isin(sel_resources)
+        ]
+        if sel_status == "Mapped only":
+            filtered = filtered[filtered["mapped_successfully"] == True]  # noqa: E712
+        elif sel_status == "Unmapped only":
+            filtered = filtered[filtered["mapped_successfully"] == False]  # noqa: E712
+        if text_q:
+            q = text_q.strip().lower()
+            filtered = filtered[
+                filtered["code"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered["display"].astype(str).str.lower().str.contains(q, na=False)
+            ]
+
+        st.caption(f"Showing **{len(filtered)}** of {len(df)} coding(s).")
+
+        # ---- Terminology table -------------------------------------------
+        display_df = filtered.rename(columns={
+            "resource_type":       "Resource Type",
+            "terminology_name":    "System",
+            "code":                "Code",
+            "display":             "Display",
+            "terminology_category": "Category",
+            "target_table":        "Target Table",
+            "mapped_successfully": "Mapped?",
+            "analytics_use":       "Analytics Use",
+        })[
+            ["Resource Type", "System", "Code", "Display",
+             "Category", "Target Table", "Mapped?", "Analytics Use"]
+        ]
+        st.dataframe(display_df, width="stretch", hide_index=True)
+
+        # ---- Per-code detail view ----------------------------------------
+        st.markdown("##### Selected code details")
+        if filtered.empty:
+            st.info("No codings match the current filters.")
+        else:
+            options = [
+                f"{r['resource_type']} · {r['terminology_name']} · {r['code']} "
+                f"— {r['display'] or '(no display)'}"
+                for _, r in filtered.iterrows()
+            ]
+            picked = st.selectbox("Pick a coding to explain", options, key="term_pick")
+            picked_row = filtered.iloc[options.index(picked)]
+            st.markdown(
+                f"""
+**FHIR {picked_row['resource_type']}** *(id: `{picked_row.get('resource_id') or '—'}`)*
+&nbsp;&nbsp;↓
+**{picked_row['terminology_name']}** `{picked_row['code']}` — {picked_row['display'] or '(no display)'}
+&nbsp;&nbsp;↓
+Maps to **`{picked_row['target_table']}`**
+&nbsp;&nbsp;↓
+Used for *{picked_row['analytics_use'].lower()}*
+
+> {picked_row['explanation']}
+                """
+            )
+
+    st.divider()
+
+    # ---- Educational terminology cards -----------------------------------
+    st.markdown("##### Terminology reference cards")
+    st.caption(
+        "Quick orientation to the standards this demo recognizes. Real ETL "
+        "would resolve every coding through these vocabularies' full content."
+    )
+
+    def _term_card(label: str, info: Dict[str, str]) -> None:
+        with st.expander(label, expanded=False):
+            st.markdown(f"**What it is.** {info.get('what_it_is', '—')}")
+            st.markdown(f"**Category.** {info.get('category', '—')}")
+            st.markdown(f"**Where in FHIR.** `{info.get('where_in_fhir', '—')}`")
+            st.markdown(f"**This demo's use.** {info.get('demo_usage', '—')}")
+            st.markdown(f"**Target table.** `{info.get('target_table', '—')}`")
+
+    _term_card("🧪 LOINC",
+               terminology.TERMINOLOGY_SYSTEMS["http://loinc.org"])
+    _term_card("🩺 SNOMED CT",
+               terminology.TERMINOLOGY_SYSTEMS["http://snomed.info/sct"])
+    _term_card("📋 ICD-10-CM",
+               terminology.TERMINOLOGY_SYSTEMS["http://hl7.org/fhir/sid/icd-10-cm"])
+    _term_card("💊 RxNorm",
+               terminology.TERMINOLOGY_SYSTEMS["http://www.nlm.nih.gov/research/umls/rxnorm"])
+    _term_card("📚 MeSH (educational reference)", terminology.MESH_INFO)
+
+    st.divider()
+    st.info(
+        "ℹ️ **Limitations.** This demo uses a **curated subset** of terminology "
+        "mappings for educational purposes. Production clinical systems use full "
+        "vocabulary tables (OHDSI Athena / UMLS / NLM RxNorm files), licensed "
+        "terminology distributions, or terminology servers (HL7 TS, SNOMED "
+        "Snowstorm, LOINC FHIR endpoints). This project is intended to "
+        "demonstrate familiarity with terminology normalization concepts, "
+        "not production-grade vocabulary coverage."
+    )
 
 # ----- OMOP-Inspired Tables ------------------------------------------------
 with tab_omop:
@@ -543,23 +710,48 @@ with tab_arch:
         concept-id resolution that real OMOP ETL performs.
 
         **ETL pipeline used here.**
-        1. *Extract.* Read FHIR Bundle JSON from `projects/fhir_omop/sample_data/`.
+
+        ```
+        FHIR Bundle JSON
+              ↓
+        Resource Extraction      (fhir_loader.py — parse, group by resourceType)
+              ↓
+        Terminology Extraction   (terminology.py — pull codings per resource)
+              ↓
+        Simplified Code Mapping  (terminology.classify_coding → 4 statuses)
+              ↓
+        OMOP-Inspired Tables     (transformers.py → fhir_demo_* tables)
+              ↓
+        Analytics Dashboard      (analytics.py — SQL queries)
+        ```
+
+        1. *Extract.* Read FHIR Bundle JSON from `projects/fhir_omop/sample_data/`
+           or from uploaded files.
         2. *Land.* Persist every resource as JSONB in
            `fhir_demo_raw_fhir_resource`, tagged to a row in
            `fhir_demo_ingestion_run`. This is the typical "schema-on-read"
            landing zone in healthcare ETL.
-        3. *Transform.* Map FHIR fields → simplified OMOP-style columns.
+        3. *Extract terminology.* `terminology.build_terminology_rows()` walks
+           every coded field (`Condition.code`, `Observation.code`,
+           `MedicationRequest.medicationCodeableConcept`, `Encounter.type`) and
+           classifies each `(system, code)` pair as **mapped**,
+           **system-known-but-code-unknown**, **unsupported system**, or
+           **missing**. The same classifier powers both the Clinical
+           Terminology Explorer tab and the legacy code-mapping report.
+        4. *Transform.* Map FHIR fields → simplified OMOP-style columns.
            Patient ids are reconciled to internal `person_id`s; FHIR
            references are resolved client-side.
-        4. *Report.* For every coded resource, emit a row into
-           `fhir_demo_code_mapping_report` indicating whether the source
-           coding system was a recognized standard vocabulary.
+        5. *Report.* For every coded resource, emit a row into
+           `fhir_demo_code_mapping_report` carrying the classification status.
 
         **Terminology mapping.**
         SNOMED CT covers diagnoses and clinical findings; LOINC covers
         observations and lab tests; RxNorm covers medications; ICD-10-CM is
-        used for billing. Real OMOP ETL invests heavily in resolving these
-        to `concept_id`s — this demo only flags presence vs. absence.
+        used for diagnosis classification and billing; MeSH is included as an
+        educational reference for biomedical literature indexing (not consumed
+        by this pipeline). Real OMOP ETL invests heavily in resolving these
+        to `concept_id`s through full vocabulary tables — this demo uses a
+        curated subset of mappings to illustrate the *shape* of that work.
 
         **Why synthetic data.**
         All bundles are hand-authored to resemble Synthea output. No real
