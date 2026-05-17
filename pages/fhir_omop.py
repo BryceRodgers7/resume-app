@@ -1,33 +1,37 @@
 """FHIR-to-OMOP clinical data pipeline demo page.
 
-A simplified healthcare interoperability demo. Loads synthetic FHIR R4
-bundles, lands them in a raw JSONB table, transforms them into a small
-OMOP-inspired schema, and renders the result as metrics, tables, and charts.
+A simplified healthcare interoperability demo. The page is a thin HTTP
+client over the FHIR-OMOP backend service (see ``FHIR_OMOP_BACKEND_PLAN.md``
+at the repo root). All database I/O — ingestion, transformation, analytics
+queries — happens in the backend. This page renders the result and
+provides the three action buttons (reset, load, transform).
 
-This is a portfolio familiarity project — not a production OMOP ETL.
+Why a backend
+-------------
+The previous version did DB work in-process. Holding a Supabase connection
+inside the Streamlit websocket made the page hang to a blank white screen
+whenever a handshake stalled. Moving the work behind an HTTP boundary lets
+the backend bound those failures (connect_timeout + retry) and surface
+them as actionable errors instead of a dead page.
 """
 import json
 import logging
 import time
-from pathlib import Path
 from typing import Dict, List
 
+import pandas as pd
 import streamlit as st
 
 import nav
 from app import home_page
-from database.db_manager import DatabaseManager
-import pandas as pd
-
-from projects.fhir_omop.pipeline import analytics, fhir_loader, terminology, transformers
-from projects.fhir_omop.pipeline import db as demo_db
+from projects.fhir_omop.pipeline import terminology
+from projects.fhir_omop.pipeline.api_client import (
+    ApiError,
+    ApiNotConfiguredError,
+    FhirOmopApiClient,
+)
 
 logger = logging.getLogger(__name__)
-
-SAMPLE_DATA_DIR = (
-    Path(__file__).resolve().parent.parent
-    / "projects" / "fhir_omop" / "sample_data"
-)
 
 st.set_page_config(
     page_title="FHIR → OMOP Demo",
@@ -40,8 +44,8 @@ nav.config_navigation(home_page)
 
 
 @st.cache_resource
-def get_db() -> DatabaseManager:
-    return DatabaseManager()
+def get_client() -> FhirOmopApiClient:
+    return FhirOmopApiClient()
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +76,10 @@ with st.expander("🎯 What this demonstrates", expanded=False):
           portfolio-friendly form
         - **ETL pipeline shape** — raw landing zone (JSONB) → transform step →
           analytics queries, each stage observable in the UI
+        - **Service-oriented architecture** — Streamlit acts as a thin HTTP
+          client; a separate FastAPI service owns the database work, with
+          idempotency keys + handshake retry to make Supabase blips
+          survivable
         - **Code-mapping reporting** — happy-path "mapped vs. unmapped" check
           to illustrate where real concept-id resolution would live
         """
@@ -80,29 +88,49 @@ with st.expander("🎯 What this demonstrates", expanded=False):
 with st.expander("🔧 Setup & demo workflow", expanded=False):
     st.markdown(
         """
-        **One-time DB setup** — run `database/fhir_omop_sql/001_create_tables.sql`
-        against the Supabase/Postgres database used by this app.
+        **Backend** — this page calls the FHIR-OMOP API service. Set
+        `FHIR_OMOP_API_URL` to the service base URL (e.g.
+        `http://fhir-omop-api.flycast` on Fly's private network).
+        See `FHIR_OMOP_BACKEND_PLAN.md` for the service spec.
+
+        **One-time DB setup** — the backend applies
+        `database/fhir_omop_sql/001_create_tables.sql` against the shared
+        Supabase database. Same schema as before; the owner just changed.
 
         **Demo workflow:**
-        1. **Reset Demo Data** — truncate every `fhir_demo_*` table.
-        2. **Load Sample FHIR Bundles** — read JSON from
-           `projects/fhir_omop/sample_data/`, open an ingestion run, and
-           persist every resource as JSONB in `fhir_demo_raw_fhir_resource`.
-        3. **Run Transformation Pipeline** — read the raw resources back out,
-           transform them into the OMOP-inspired tables, and generate the
+        1. **Reset Demo Data** — backend truncates every `fhir_demo_*` table.
+        2. **Load Sample FHIR Bundles** — backend reads its bundled samples,
+           lands every resource as JSONB in `fhir_demo_raw_fhir_resource`,
+           one transaction.
+        3. **Run Transformation Pipeline** — backend transforms raw resources
+           into the OMOP-inspired tables in one transaction and writes the
            code-mapping report.
 
         Each step is independent and idempotent within a fresh reset.
+        Calls carry an `Idempotency-Key` so the backend de-duplicates writes
+        if the client retries.
         """
     )
 
 # ---------------------------------------------------------------------------
-# DB handle
+# Client init (with config banner on failure)
 # ---------------------------------------------------------------------------
 try:
-    db = get_db()
-except Exception as e:
-    st.error(f"Database not available: {e}")
+    client = get_client()
+except ApiNotConfiguredError as e:
+    st.error("⚙️ **Backend service is not configured**")
+    st.markdown(
+        f"""
+        {e}
+
+        **To use this page:**
+        1. Deploy the FHIR-OMOP API service (see
+           [`FHIR_OMOP_BACKEND_PLAN.md`](FHIR_OMOP_BACKEND_PLAN.md)).
+        2. Set the `FHIR_OMOP_API_URL` environment variable on this
+           Streamlit app to point at the deployed service.
+        3. Reload the page.
+        """
+    )
     st.stop()
 
 # ---------------------------------------------------------------------------
@@ -123,84 +151,60 @@ with col_c:
 status_placeholder = st.empty()
 
 
+def _retry_notice(status_ui, op_label: str):
+    """Return an on_retry callback that surfaces the retry in st.status."""
+    def on_retry(err: Exception) -> None:
+        status_ui.write(f"⚠️ {op_label} failed ({err}). Retrying in 2s...")
+        status_ui.update(label=f"{op_label} — retrying after transient error")
+    return on_retry
+
+
 def _run_reset() -> None:
     logger.info("reset: user clicked Reset Demo Data")
     t0 = time.perf_counter()
-    with st.status("Truncating `fhir_demo_*` tables...", expanded=False) as s:
-        demo_db.reset_demo_data(db)
-        s.update(label=f"All `fhir_demo_*` tables truncated ({time.perf_counter() - t0:.2f}s)",
-                 state="complete")
+    with st.status("Resetting demo data via backend...", expanded=False) as s:
+        client.reset(on_retry=_retry_notice(s, "Reset"))
+        s.update(
+            label=f"All `fhir_demo_*` tables truncated ({time.perf_counter() - t0:.2f}s)",
+            state="complete",
+        )
     logger.info("reset: complete (%.3fs)", time.perf_counter() - t0)
     status_placeholder.success("All `fhir_demo_*` tables truncated.")
-
-
-def _ingest_bundles(bundles: List[dict], source_label: str, status_ui) -> None:
-    """Land already-parsed FHIR Bundles into fhir_demo_raw_fhir_resource.
-
-    Shared by the sample-data path and the upload path so both produce the
-    same audit trail (one ingestion_run row per click) and the same logging
-    surface. All DB writes happen inside a SINGLE transaction
-    (`demo_db.bulk_ingest_resources`) so the click triggers exactly one
-    Supabase round-trip end-to-end — the previous 3-round-trip flow was the
-    cause of the "white screen while it hangs" symptom.
-    """
-    status_ui.update(label=f"{source_label}: grouping resources by type...")
-    t_group = time.perf_counter()
-    grouped = fhir_loader.group_bundles_by_resource_type(bundles)
-    all_resources = [r for rs in grouped.values() for r in rs]
-    logger.info(
-        "ingest: %s — %d bundle(s), %d resource(s) total, grouped in %.3fs",
-        source_label, len(bundles), len(all_resources), time.perf_counter() - t_group,
-    )
-    status_ui.write(f"Grouped **{len(all_resources)}** resource(s) from **{len(bundles)}** bundle(s).")
-
-    if not all_resources:
-        status_ui.update(label=f"{source_label}: no FHIR resources found.", state="error")
-        status_placeholder.warning(f"{source_label}: no FHIR resources found.")
-        return
-
-    status_ui.update(label=f"{source_label}: writing to Supabase (1 transaction)...")
-    t_db = time.perf_counter()
-    run_id, inserted = demo_db.bulk_ingest_resources(db, source_label, all_resources)
-    elapsed = time.perf_counter() - t_db
-    logger.info(
-        "ingest: %s — wrote run #%d, %d row(s) to fhir_demo_raw_fhir_resource in %.3fs",
-        source_label, run_id, inserted, elapsed,
-    )
-    status_ui.write(f"Inserted **{inserted}** raw resource(s) under run **#{run_id}** ({elapsed:.2f}s).")
-    status_ui.update(label=f"{source_label} — run #{run_id} complete.", state="complete")
-    status_placeholder.success(
-        f"{source_label} — {len(bundles)} bundle(s), "
-        f"{inserted} raw resources inserted (run #{run_id})."
-    )
 
 
 def _run_sample_load() -> None:
     logger.info("sample_load: user clicked Load Sample FHIR Bundles")
     t0 = time.perf_counter()
-    with st.status("Loading sample FHIR bundles...", expanded=True) as s:
-        s.update(label=f"Scanning {SAMPLE_DATA_DIR.name}/ for bundle files...")
-        bundle_paths = fhir_loader.discover_bundle_files(SAMPLE_DATA_DIR)
-        s.write(f"Found **{len(bundle_paths)}** bundle file(s).")
-        if not bundle_paths:
-            logger.warning("sample_load: no bundle files under %s", SAMPLE_DATA_DIR)
-            s.update(label="No bundle files found.", state="error")
-            status_placeholder.warning(f"No bundle files found in {SAMPLE_DATA_DIR}")
-            return
-        s.update(label=f"Parsing {len(bundle_paths)} bundle file(s)...")
-        bundles = [fhir_loader.load_bundle(p) for p in bundle_paths]
-        _ingest_bundles(bundles, source_label="Loaded sample bundles", status_ui=s)
+    idem = client.new_idempotency_key()
+    with st.status("Loading sample FHIR bundles via backend...", expanded=True) as s:
+        s.update(label="POST /ingest/sample (1 transaction)...")
+        result = client.ingest_sample(idem_key=idem, on_retry=_retry_notice(s, "Sample load"))
+        raw_count = result.get("raw_count", 0)
+        bundle_count = result.get("bundle_count", 0)
+        run_id = result.get("run_id")
+        server_elapsed = result.get("elapsed_ms", 0) / 1000.0
+        s.write(
+            f"Backend ingested **{raw_count}** resource(s) from **{bundle_count}** "
+            f"bundle(s) under run **#{run_id}** (server-side {server_elapsed:.2f}s)."
+        )
+        s.update(
+            label=f"Sample load complete ({time.perf_counter() - t0:.2f}s).",
+            state="complete",
+        )
     logger.info("sample_load: end-to-end %.3fs", time.perf_counter() - t0)
+    status_placeholder.success(
+        f"Loaded {raw_count} resource(s) from {bundle_count} bundle(s) — run #{run_id}."
+    )
 
 
 def _run_uploaded_load(uploaded_files) -> None:
-    logger.info(
-        "upload_load: user clicked Load Uploaded Bundles — %d file(s) selected",
-        len(uploaded_files) if uploaded_files else 0,
-    )
     if not uploaded_files:
         status_placeholder.warning("No files selected.")
         return
+    logger.info(
+        "upload_load: user clicked Load Uploaded Bundles — %d file(s) selected",
+        len(uploaded_files),
+    )
     t0 = time.perf_counter()
     with st.status(f"Parsing {len(uploaded_files)} uploaded file(s)...", expanded=True) as s:
         bundles: List[dict] = []
@@ -210,14 +214,11 @@ def _run_uploaded_load(uploaded_files) -> None:
                 payload = uf.getvalue()
                 bundle = json.loads(payload.decode("utf-8"))
                 bundles.append(bundle)
-                logger.info(
-                    "upload_load: parsed %s (%d bytes, %d entries)",
-                    uf.name, len(payload), len(bundle.get("entry", []) or []),
+                s.write(
+                    f"Parsed `{uf.name}` — {len(payload):,} bytes, "
+                    f"{len(bundle.get('entry', []) or [])} entries"
                 )
-                s.write(f"Parsed `{uf.name}` — {len(payload):,} bytes, "
-                        f"{len(bundle.get('entry', []) or [])} entries")
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                logger.warning("upload_load: failed to parse %s — %s", uf.name, e)
                 bad.append(f"{uf.name}: {e}")
         if bad:
             s.update(label="Some uploads could not be parsed as JSON.", state="error")
@@ -225,87 +226,80 @@ def _run_uploaded_load(uploaded_files) -> None:
                 "Some uploads could not be parsed as JSON:\n- " + "\n- ".join(bad)
             )
             return
-        _ingest_bundles(bundles, source_label="Loaded uploaded bundles", status_ui=s)
+
+        idem = client.new_idempotency_key()
+        s.update(label=f"POST /ingest ({len(bundles)} bundle(s), 1 transaction)...")
+        result = client.ingest(
+            bundles=bundles,
+            source_label="Loaded uploaded bundles",
+            idem_key=idem,
+            on_retry=_retry_notice(s, "Upload"),
+        )
+        raw_count = result.get("raw_count", 0)
+        run_id = result.get("run_id")
+        s.write(
+            f"Backend ingested **{raw_count}** raw resource(s) under run **#{run_id}**."
+        )
+        s.update(
+            label=f"Upload load complete ({time.perf_counter() - t0:.2f}s).",
+            state="complete",
+        )
     logger.info("upload_load: end-to-end %.3fs", time.perf_counter() - t0)
+    status_placeholder.success(
+        f"Uploaded — {len(bundles)} bundle(s), {raw_count} raw resources (run #{run_id})."
+    )
 
 
 def _run_transform() -> None:
-    """Run the full FHIR → OMOP-inspired transform.
-
-    Uses ``demo_db.run_transform_in_one_transaction`` so every write happens
-    inside ONE Supabase connection / transaction. The page therefore makes
-    at most two round-trips per click: one read (``fetch_raw_resources``)
-    and one write (the transform commit). This is what eliminated the
-    seven-round-trip fan-out that was occasionally stalling the browser
-    long enough to drop Streamlit's websocket and blank the page.
-    """
     logger.info("transform: user clicked Run Transformation Pipeline")
     t0 = time.perf_counter()
-    with st.status("Running transformation pipeline...", expanded=True) as s:
-        s.update(label="Reading raw resources from Supabase...")
-        t = time.perf_counter()
-        grouped = demo_db.fetch_raw_resources_by_type(db)
-        logger.info(
-            "transform: fetched raw resources in %.3fs — %s",
-            time.perf_counter() - t,
-            {k: len(v) for k, v in grouped.items()},
-        )
-        if not grouped:
-            logger.warning("transform: no raw resources to transform")
-            s.update(label="No raw resources found.", state="error")
-            status_placeholder.warning(
-                "No raw resources found. Click **Load Sample FHIR Bundles** first."
-            )
-            return
-
-        s.write(f"Read {sum(len(v) for v in grouped.values())} raw resource(s) "
-                f"across {len(grouped)} resource type(s).")
-
-        s.update(label="Transforming + writing to Supabase (single transaction)...")
-        t = time.perf_counter()
-        counts, person_lookup = demo_db.run_transform_in_one_transaction(db, grouped)
-        logger.info(
-            "transform: single-tx complete in %.3fs — counts=%s",
-            time.perf_counter() - t, counts,
-        )
+    idem = client.new_idempotency_key()
+    with st.status("Running transformation pipeline via backend...", expanded=True) as s:
+        s.update(label="POST /transform (single transaction on backend)...")
+        result = client.transform(idem_key=idem, on_retry=_retry_notice(s, "Transform"))
+        counts = result.get("counts", {})
+        server_elapsed = result.get("elapsed_ms", 0) / 1000.0
         s.write(
-            f"Inserted **{counts['persons']}** persons, "
-            f"**{counts['visits']}** visits, **{counts['conditions']}** conditions, "
-            f"**{counts['measurements']}** measurements, "
-            f"**{counts['drug_exposures']}** drug exposures, "
-            f"**{counts['mapping_report']}** mapping report row(s)."
+            f"Backend inserted **{counts.get('persons', 0)}** persons, "
+            f"**{counts.get('visits', 0)}** visits, "
+            f"**{counts.get('conditions', 0)}** conditions, "
+            f"**{counts.get('measurements', 0)}** measurements, "
+            f"**{counts.get('drug_exposures', 0)}** drug exposures, "
+            f"**{counts.get('mapping_report', 0)}** mapping report row(s) "
+            f"(server-side {server_elapsed:.2f}s)."
         )
-
-        elapsed = time.perf_counter() - t0
-        s.update(label=f"Transformation complete ({elapsed:.2f}s).", state="complete")
-        logger.info("transform: end-to-end %.3fs", elapsed)
-        status_placeholder.success(
-            f"Transformation complete — {counts['persons']} persons, "
-            f"{counts['visits']} visits, {counts['conditions']} conditions, "
-            f"{counts['measurements']} measurements, "
-            f"{counts['drug_exposures']} drug exposures, "
-            f"{counts['mapping_report']} mapping rows."
+        s.update(
+            label=f"Transformation complete ({time.perf_counter() - t0:.2f}s).",
+            state="complete",
         )
+    logger.info("transform: end-to-end %.3fs", time.perf_counter() - t0)
+    status_placeholder.success(
+        f"Transformation complete — {counts.get('persons', 0)} persons, "
+        f"{counts.get('visits', 0)} visits, {counts.get('conditions', 0)} conditions, "
+        f"{counts.get('measurements', 0)} measurements, "
+        f"{counts.get('drug_exposures', 0)} drug exposures, "
+        f"{counts.get('mapping_report', 0)} mapping rows."
+    )
 
 
 if reset_clicked:
     try:
         _run_reset()
-    except Exception as e:
+    except ApiError as e:
         logger.exception("Reset failed")
         status_placeholder.error(f"Reset failed: {e}")
 
 if load_clicked:
     try:
         _run_sample_load()
-    except Exception as e:
-        logger.exception("Load failed")
-        status_placeholder.error(f"Load failed: {e}")
+    except ApiError as e:
+        logger.exception("Sample load failed")
+        status_placeholder.error(f"Sample load failed: {e}")
 
 if transform_clicked:
     try:
         _run_transform()
-    except Exception as e:
+    except ApiError as e:
         logger.exception("Transform failed")
         status_placeholder.error(f"Transform failed: {e}")
 
@@ -328,48 +322,57 @@ with st.expander("📤 Or upload your own FHIR Bundle JSON files", expanded=Fals
     if st.button("📥 Load Uploaded Bundles", width="content", disabled=not uploaded_files):
         try:
             _run_uploaded_load(uploaded_files)
-        except Exception as e:
+        except ApiError as e:
             logger.exception("Upload load failed")
             status_placeholder.error(f"Upload load failed: {e}")
 
 st.divider()
 
 # ---------------------------------------------------------------------------
+# Dashboard fetch — ONE call to /dashboard renders everything below.
+# ---------------------------------------------------------------------------
+# Collapsing the previous ~17 separate DB connections (per page rerun) into
+# a single HTTP request is the actual win of moving to a backend. If this
+# call fails after the client's internal retry, the page renders an error
+# banner and stops; individual tabs don't make their own backend calls.
+with st.spinner("Loading dashboard from backend..."):
+    try:
+        dashboard = client.dashboard()
+    except ApiError as e:
+        st.error(
+            f"Could not load dashboard from backend: {e}\n\n"
+            "Check the backend service health and `FHIR_OMOP_API_URL`."
+        )
+        st.stop()
+
+# ---------------------------------------------------------------------------
 # Metric cards
 # ---------------------------------------------------------------------------
-try:
-    counts = analytics.get_summary_counts(db)
-    mapping_rate = analytics.get_mapping_success_rate(db)
-except Exception as e:
-    counts = {"raw_resources": 0, "patients": 0, "encounters": 0,
-              "conditions": 0, "measurements": 0, "drug_exposures": 0}
-    mapping_rate = None
-    st.warning(
-        f"Could not load metrics from the database — "
-        f"have you run `database/fhir_omop_sql/001_create_tables.sql`? ({e})"
-    )
+counts: Dict[str, int] = dashboard.get("summary", {}) or {}
+mapping_rate = dashboard.get("mapping_success_rate")
 
-# Pipeline-stage banner: keeps the row of metric cards from looking like a
-# bug when raw data is loaded but the transformation hasn't run yet.
-omop_total = (
-    counts["patients"] + counts["encounters"] + counts["conditions"]
-    + counts["measurements"] + counts["drug_exposures"]
+omop_total = sum(
+    counts.get(k, 0)
+    for k in ("patients", "encounters", "conditions", "measurements", "drug_exposures")
 )
-if counts["raw_resources"] > 0 and omop_total == 0:
+if counts.get("raw_resources", 0) > 0 and omop_total == 0:
     st.info(
-        f"📥 **{counts['raw_resources']} raw FHIR resource(s) loaded** — "
+        f"📥 **{counts.get('raw_resources', 0)} raw FHIR resource(s) loaded** — "
         f"click **Run Transformation Pipeline** above to populate the "
         f"OMOP-inspired tables and the metrics below."
     )
-elif counts["raw_resources"] > 0:
-    st.caption(f"🗂️ {counts['raw_resources']} raw FHIR resource(s) currently in the landing zone.")
+elif counts.get("raw_resources", 0) > 0:
+    st.caption(
+        f"🗂️ {counts.get('raw_resources', 0)} raw FHIR resource(s) currently "
+        f"in the landing zone."
+    )
 
 m1, m2, m3, m4, m5, m6 = st.columns(6)
-m1.metric("Patients",              counts["patients"])
-m2.metric("Encounters",            counts["encounters"])
-m3.metric("Conditions",            counts["conditions"])
-m4.metric("Measurements",          counts["measurements"])
-m5.metric("Drug Exposures",        counts["drug_exposures"])
+m1.metric("Patients",              counts.get("patients", 0))
+m2.metric("Encounters",            counts.get("encounters", 0))
+m3.metric("Conditions",            counts.get("conditions", 0))
+m4.metric("Measurements",          counts.get("measurements", 0))
+m5.metric("Drug Exposures",        counts.get("drug_exposures", 0))
 m6.metric("Mapping Success Rate",  f"{mapping_rate}%" if mapping_rate is not None else "—")
 
 st.divider()
@@ -389,11 +392,7 @@ tab_raw, tab_term, tab_omop, tab_mapping, tab_analytics, tab_arch = st.tabs([
 # ----- Raw FHIR Resources --------------------------------------------------
 with tab_raw:
     st.markdown("#### Raw FHIR resources (as stored in `fhir_demo_raw_fhir_resource`)")
-    try:
-        raw = demo_db.fetch_raw_resources_by_type(db)
-    except Exception as e:
-        raw = {}
-        st.error(f"Could not read raw resources: {e}")
+    raw: Dict[str, List[dict]] = dashboard.get("raw_resources_by_type", {}) or {}
     if not raw:
         st.info("No raw resources loaded yet. Click **Load Sample FHIR Bundles** above.")
     else:
@@ -416,13 +415,7 @@ with tab_term:
         """
     )
 
-    # Pull raw resources and build terminology rows (in-memory; no new tables).
-    try:
-        raw_grouped = demo_db.fetch_raw_resources_by_type(db)
-    except Exception as e:
-        raw_grouped = {}
-        st.error(f"Could not read raw resources: {e}")
-
+    raw_grouped: Dict[str, List[dict]] = dashboard.get("raw_resources_by_type", {}) or {}
     all_raw = [r for rs in raw_grouped.values() for r in rs]
     term_rows = terminology.build_terminology_rows(all_raw)
 
@@ -432,7 +425,6 @@ with tab_term:
             "(or upload your own bundles) above to populate this view."
         )
     else:
-        # ---- Summary metric cards -----------------------------------------
         summary = terminology.summarize_terminology_rows(term_rows)
         t1, t2, t3, t4, t5 = st.columns(5)
         t1.metric("Total coded concepts",      summary["total_codings"])
@@ -441,7 +433,6 @@ with tab_term:
         t4.metric("Unsupported systems",       summary["unsupported"])
         t5.metric("Missing / unknown codes",   summary["missing_or_unknown"])
 
-        # ---- Filters ------------------------------------------------------
         df = pd.DataFrame(term_rows)
         all_systems   = sorted(df["terminology_name"].dropna().unique().tolist())
         all_resources = sorted(df["resource_type"].dropna().unique().tolist())
@@ -487,7 +478,6 @@ with tab_term:
 
         st.caption(f"Showing **{len(filtered)}** of {len(df)} coding(s).")
 
-        # ---- Terminology table -------------------------------------------
         display_df = filtered.rename(columns={
             "resource_type":       "Resource Type",
             "terminology_name":    "System",
@@ -503,7 +493,6 @@ with tab_term:
         ]
         st.dataframe(display_df, width="stretch", hide_index=True)
 
-        # ---- Per-code detail view ----------------------------------------
         st.markdown("##### Selected code details")
         if filtered.empty:
             st.info("No codings match the current filters.")
@@ -531,7 +520,6 @@ Used for *{picked_row['analytics_use'].lower()}*
 
     st.divider()
 
-    # ---- Educational terminology cards -----------------------------------
     st.markdown("##### Terminology reference cards")
     st.caption(
         "Quick orientation to the standards this demo recognizes. Real ETL "
@@ -574,6 +562,7 @@ with tab_omop:
         "These tables are intentionally a simplified slice of the real OMOP CDM. "
         "Concept-id resolution, vocabulary tables, and a great deal of nuance have been omitted."
     )
+    omop_tables: Dict[str, List[dict]] = dashboard.get("omop_tables", {}) or {}
     for table in [
         "fhir_demo_person",
         "fhir_demo_visit_occurrence",
@@ -582,14 +571,11 @@ with tab_omop:
         "fhir_demo_drug_exposure",
     ]:
         st.markdown(f"**`{table}`**")
-        try:
-            df = demo_db.fetch_table_dataframe(db, table)
-            if df.empty:
-                st.info("(empty)")
-            else:
-                st.dataframe(df, width="stretch", hide_index=True)
-        except Exception as e:
-            st.error(f"Could not load {table}: {e}")
+        rows = omop_tables.get(table, [])
+        if not rows:
+            st.info("(empty)")
+        else:
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 # ----- Code Mapping Report -------------------------------------------------
 with tab_mapping:
@@ -612,61 +598,51 @@ with tab_mapping:
         flagged so they can be reviewed downstream.
         """
     )
-    try:
-        report = analytics.get_mapping_report(db)
-        if report.empty:
-            st.info("Run the transformation pipeline to generate a mapping report.")
-        else:
-            st.dataframe(report, width="stretch", hide_index=True)
-    except Exception as e:
-        st.error(f"Could not load mapping report: {e}")
+    report_rows: List[dict] = dashboard.get("mapping_report", []) or []
+    if not report_rows:
+        st.info("Run the transformation pipeline to generate a mapping report.")
+    else:
+        st.dataframe(pd.DataFrame(report_rows), width="stretch", hide_index=True)
 
 # ----- Analytics Dashboard -------------------------------------------------
 with tab_analytics:
     st.markdown("#### Analytics dashboard")
+    analytics_payload: Dict[str, List[dict]] = dashboard.get("analytics", {}) or {}
     a_col1, a_col2 = st.columns(2)
 
     with a_col1:
         st.markdown("**Conditions by frequency**")
-        try:
-            df = analytics.get_conditions_by_frequency(db)
-            if df.empty:
-                st.info("No conditions yet.")
-            else:
-                st.bar_chart(df.set_index("condition")["occurrences"])
-        except Exception as e:
-            st.error(str(e))
+        rows = analytics_payload.get("conditions_by_frequency", []) or []
+        if not rows:
+            st.info("No conditions yet.")
+        else:
+            df = pd.DataFrame(rows)
+            st.bar_chart(df.set_index("condition")["occurrences"])
 
         st.markdown("**Encounters by visit type**")
-        try:
-            df = analytics.get_encounter_counts_by_type(db)
-            if df.empty:
-                st.info("No encounters yet.")
-            else:
-                st.bar_chart(df.set_index("visit_type")["encounters"])
-        except Exception as e:
-            st.error(str(e))
+        rows = analytics_payload.get("encounters_by_type", []) or []
+        if not rows:
+            st.info("No encounters yet.")
+        else:
+            df = pd.DataFrame(rows)
+            st.bar_chart(df.set_index("visit_type")["encounters"])
 
     with a_col2:
         st.markdown("**Measurements over time**")
-        try:
-            df = analytics.get_measurements_over_time(db)
-            if df.empty:
-                st.info("No measurements yet.")
-            else:
-                st.line_chart(df.set_index("date")["measurements"])
-        except Exception as e:
-            st.error(str(e))
+        rows = analytics_payload.get("measurements_over_time", []) or []
+        if not rows:
+            st.info("No measurements yet.")
+        else:
+            df = pd.DataFrame(rows)
+            st.line_chart(df.set_index("date")["measurements"])
 
         st.markdown("**Drug exposures by display name**")
-        try:
-            df = analytics.get_drug_counts(db)
-            if df.empty:
-                st.info("No drug exposures yet.")
-            else:
-                st.bar_chart(df.set_index("drug")["prescriptions"])
-        except Exception as e:
-            st.error(str(e))
+        rows = analytics_payload.get("drug_counts", []) or []
+        if not rows:
+            st.info("No drug exposures yet.")
+        else:
+            df = pd.DataFrame(rows)
+            st.bar_chart(df.set_index("drug")["prescriptions"])
 
 # ----- Architecture Notes --------------------------------------------------
 with tab_arch:
@@ -688,40 +664,61 @@ with tab_arch:
         mirrors that *shape* with `fhir_demo_*` tables — without the
         concept-id resolution that real OMOP ETL performs.
 
+        **Service split.**
+
+        ```
+        Browser
+           │
+           ▼
+        Streamlit (this page) ── single HTTP GET /dashboard per rerun
+           │                       buttons POST to /reset · /ingest · /transform
+           ▼
+        FHIR-OMOP API (FastAPI on Fly.io)
+           │  - single-transaction ingest + transform
+           │  - psycopg2 connect_timeout + handshake retry
+           │  - Idempotency-Key de-dup for /ingest and /transform
+           ▼
+        Supabase Postgres  (fhir_demo_* schema)
+        ```
+
+        The Streamlit page used to call `DatabaseManager` directly, which
+        opened ~17 Supabase connections per rerun and routinely hung the
+        websocket when a handshake stalled. Moving DB I/O to a separate
+        FastAPI service lets the backend bound those failures (timeout +
+        retry) and surface them as actionable errors instead of blank pages.
+        See `FHIR_OMOP_BACKEND_PLAN.md` for the service spec.
+
         **ETL pipeline used here.**
 
         ```
         FHIR Bundle JSON
               ↓
-        Resource Extraction      (fhir_loader.py — parse, group by resourceType)
+        Resource Extraction      (backend: fhir_loader.py)
               ↓
-        Terminology Extraction   (terminology.py — pull codings per resource)
+        Terminology Extraction   (backend + client: terminology.py)
               ↓
-        Simplified Code Mapping  (terminology.classify_coding → 4 statuses)
+        Simplified Code Mapping  (backend: terminology.classify_coding)
               ↓
-        OMOP-Inspired Tables     (transformers.py → fhir_demo_* tables)
+        OMOP-Inspired Tables     (backend: transformers.py)
               ↓
-        Analytics Dashboard      (analytics.py — SQL queries)
+        Analytics Dashboard      (backend: analytics.py; one GET response)
         ```
 
-        1. *Extract.* Read FHIR Bundle JSON from `projects/fhir_omop/sample_data/`
-           or from uploaded files.
-        2. *Land.* Persist every resource as JSONB in
+        1. *Extract.* Backend reads FHIR Bundle JSON from its bundled samples
+           or from the client's `/ingest` body.
+        2. *Land.* Backend persists every resource as JSONB in
            `fhir_demo_raw_fhir_resource`, tagged to a row in
-           `fhir_demo_ingestion_run`. This is the typical "schema-on-read"
-           landing zone in healthcare ETL.
-        3. *Extract terminology.* `terminology.build_terminology_rows()` walks
-           every coded field (`Condition.code`, `Observation.code`,
-           `MedicationRequest.medicationCodeableConcept`, `Encounter.type`) and
-           classifies each `(system, code)` pair as **mapped**,
-           **system-known-but-code-unknown**, **unsupported system**, or
-           **missing**. The same classifier powers both the Clinical
-           Terminology Explorer tab and the legacy code-mapping report.
-        4. *Transform.* Map FHIR fields → simplified OMOP-style columns.
-           Patient ids are reconciled to internal `person_id`s; FHIR
-           references are resolved client-side.
-        5. *Report.* For every coded resource, emit a row into
-           `fhir_demo_code_mapping_report` carrying the classification status.
+           `fhir_demo_ingestion_run`. Single transaction.
+        3. *Extract terminology.* The Clinical Terminology Explorer tab runs
+           `terminology.build_terminology_rows()` **client-side** on the raw
+           resources returned by `/dashboard`. No round-trip per filter
+           change.
+        4. *Transform.* Backend maps FHIR fields → simplified OMOP-style
+           columns. Patient ids are reconciled to internal `person_id`s
+           inside the single transaction.
+        5. *Report.* Backend emits one row into
+           `fhir_demo_code_mapping_report` per coded resource with the
+           classification status.
 
         **Terminology mapping.**
         SNOMED CT covers diagnoses and clinical findings; LOINC covers
@@ -738,10 +735,10 @@ with tab_arch:
         with the *shape* of FHIR R4 and OMOP-style workflows.
 
         **Why this project exists.**
-        It's a portfolio familiarity demo — to show that the patterns of
+        A portfolio familiarity demo — showing that the patterns of
         healthcare interoperability (resource-oriented JSON, terminology
         mapping, OMOP-style flattening, raw-then-curated ETL) are well
-        understood, and deployable on the existing Streamlit + Supabase +
-        Fly.io stack with no extra services or backends.
+        understood, and deployable as a Streamlit-fronted service split on
+        Fly.io with idempotent writes and bounded failure modes.
         """
     )
