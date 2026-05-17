@@ -43,6 +43,24 @@ st.set_page_config(
 nav.config_navigation(home_page)
 
 
+# Friendly category labels used wherever the page would otherwise expose
+# internal storage names. Keeps the UI vendor-neutral and avoids leaking the
+# physical schema.
+_TABLE_LABELS: Dict[str, str] = {
+    "fhir_demo_person":              "Patients",
+    "fhir_demo_visit_occurrence":    "Visits",
+    "fhir_demo_condition_occurrence": "Conditions",
+    "fhir_demo_measurement":         "Measurements",
+    "fhir_demo_drug_exposure":       "Drug Exposures",
+    "fhir_demo_code_mapping_report": "Code Mapping Report",
+    "fhir_demo_raw_fhir_resource":   "Raw FHIR Landing Zone",
+}
+
+
+def _label_for(table_name: str) -> str:
+    return _TABLE_LABELS.get(table_name, table_name)
+
+
 @st.cache_resource
 def get_client() -> FhirOmopApiClient:
     return FhirOmopApiClient()
@@ -51,64 +69,80 @@ def get_client() -> FhirOmopApiClient:
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-st.title("🧬 FHIR-to-OMOP Clinical Data Pipeline Demo")
+st.title("🧬 FHIR-to-OMOP Clinical Data Pipeline")
 
 st.markdown(
     """
-    ### Simplified Healthcare Interoperability Demo
+    ### Healthcare Interoperability: Raw FHIR → Curated Analytics Schema
 
-    This page loads **synthetic FHIR R4** patient bundles, transforms them into
-    a **simplified, OMOP-inspired relational schema**, and surfaces the result
-    as analytics and tables.
-
-    It is intended to demonstrate familiarity with healthcare interoperability
-    concepts — **not** production clinical compliance or certified OMOP CDM use.
+    A healthcare data pipeline that ingests synthetic **FHIR R4** patient
+    bundles, transforms them into an **OMOP-inspired analytics schema**, and
+    surfaces the result as interactive tables and charts. This page
+    demonstrates familiarity with healthcare interoperability concepts —
+    not production clinical compliance or certified OMOP CDM use.
     """
 )
 
-with st.expander("🎯 What this demonstrates", expanded=False):
+with st.expander("🎯 What This Demonstrates", expanded=False):
     st.markdown(
         """
         - **FHIR R4 ingestion** — reading Bundle JSON resembling Synthea output
         - **Standard terminology awareness** — SNOMED CT, LOINC, RxNorm, ICD-10
-        - **OMOP-inspired modeling** — person / visit_occurrence /
-          condition_occurrence / measurement / drug_exposure flattened into a
-          portfolio-friendly form
-        - **ETL pipeline shape** — raw landing zone (JSONB) → transform step →
+        - **OMOP-inspired modeling** — Patients, Visits, Conditions,
+          Measurements, and Drug Exposures flattened from FHIR resources
+        - **ETL pipeline shape** — raw landing zone → transform step →
           analytics queries, each stage observable in the UI
-        - **Service-oriented architecture** — Streamlit acts as a thin HTTP
-          client; a separate FastAPI service owns the database work, with
-          idempotency keys + handshake retry to make Supabase blips
-          survivable
-        - **Code-mapping reporting** — happy-path "mapped vs. unmapped" check
-          to illustrate where real concept-id resolution would live
+        - **Service-oriented architecture** — a thin front-end calling a
+          dedicated backend service, with idempotent writes and bounded
+          failure modes
+        - **Code-mapping reporting** — a "mapped vs. unmapped" check that
+          illustrates where real concept-id resolution would live in a
+          production pipeline
         """
     )
 
-with st.expander("🔧 Setup & demo workflow", expanded=False):
+with st.expander("🔧 Pipeline Architecture", expanded=False):
     st.markdown(
         """
-        **Backend** — this page calls the FHIR-OMOP API service. Set
-        `FHIR_OMOP_API_URL` to the service base URL (e.g.
-        `http://fhir-omop-api.flycast` on Fly's private network).
-        See `FHIR_OMOP_BACKEND_PLAN.md` for the service spec.
+        **Stages:**
+        1. Synthetic FHIR R4 Bundle JSON (hand-authored, resembling Synthea output)
+        2. Raw landing zone — every resource persisted as JSONB
+        3. Transformation — FHIR resources flattened into OMOP-style columns
+        4. Code mapping report — classifies each coded resource against
+           recognized standard vocabularies
+        5. Analytics — frequency and time-series queries powering the charts
 
-        **One-time DB setup** — the backend applies
-        `database/fhir_omop_sql/001_create_tables.sql` against the shared
-        Supabase database. Same schema as before; the owner just changed.
+        **Implementation notes:**
+        - PostgreSQL holds both the raw landing zone and the curated schema
+        - A dedicated backend service owns all database I/O
+        - Writes happen in a single transaction per pipeline step
+        - Idempotency keys de-duplicate retried calls so transient network
+          blips don't corrupt the ingestion run
+        """
+    )
 
-        **Demo workflow:**
-        1. **Reset Demo Data** — backend truncates every `fhir_demo_*` table.
-        2. **Load Sample FHIR Bundles** — backend reads its bundled samples,
-           lands every resource as JSONB in `fhir_demo_raw_fhir_resource`,
-           one transaction.
-        3. **Run Transformation Pipeline** — backend transforms raw resources
-           into the OMOP-inspired tables in one transaction and writes the
-           code-mapping report.
+with st.expander("💡 Try It Out", expanded=False):
+    st.markdown(
+        """
+        **Three buttons, in order:**
+        1. 🧹 **Reset Demo Data** — clears the previous run's results
+        2. 📥 **Load Sample FHIR Bundles** — ingests three hand-authored
+           patient bundles into the raw landing zone
+        3. ⚙️ **Run Transformation Pipeline** — flattens raw FHIR resources
+           into the analytics tables and generates the code-mapping report
 
-        Each step is independent and idempotent within a fresh reset.
-        Calls carry an `Idempotency-Key` so the backend de-duplicates writes
-        if the client retries.
+        **Then explore the tabs below:**
+        - **Raw FHIR Resources** — every JSON resource as it was received
+        - **Clinical Terminology Explorer** — every coded concept, its source
+          vocabulary, and how it maps into the analytics schema
+        - **OMOP-Inspired Tables** — the flattened relational view used for
+          analytics
+        - **Code Mapping Report** — which codings were recognized vs. flagged
+        - **Analytics Dashboard** — frequency and time-series views over the
+          curated data
+
+        Or use the **upload** expander further down to drop your own FHIR
+        Bundle JSON files into the same pipeline.
         """
     )
 
@@ -117,19 +151,11 @@ with st.expander("🔧 Setup & demo workflow", expanded=False):
 # ---------------------------------------------------------------------------
 try:
     client = get_client()
-except ApiNotConfiguredError as e:
-    st.error("⚙️ **Backend service is not configured**")
-    st.markdown(
-        f"""
-        {e}
-
-        **To use this page:**
-        1. Deploy the FHIR-OMOP API service (see
-           [`FHIR_OMOP_BACKEND_PLAN.md`](FHIR_OMOP_BACKEND_PLAN.md)).
-        2. Set the `FHIR_OMOP_API_URL` environment variable on this
-           Streamlit app to point at the deployed service.
-        3. Reload the page.
-        """
+except ApiNotConfiguredError:
+    st.error(
+        "⚙️ This page is currently unavailable — the data pipeline behind it "
+        "is not reachable. Please check back later, or contact the site "
+        "maintainer."
     )
     st.stop()
 
@@ -162,30 +188,30 @@ def _retry_notice(status_ui, op_label: str):
 def _run_reset() -> None:
     logger.info("reset: user clicked Reset Demo Data")
     t0 = time.perf_counter()
-    with st.status("Resetting demo data via backend...", expanded=False) as s:
+    with st.status("Resetting demo data...", expanded=False) as s:
         client.reset(on_retry=_retry_notice(s, "Reset"))
         s.update(
-            label=f"All `fhir_demo_*` tables truncated ({time.perf_counter() - t0:.2f}s)",
+            label=f"Demo data cleared ({time.perf_counter() - t0:.2f}s)",
             state="complete",
         )
     logger.info("reset: complete (%.3fs)", time.perf_counter() - t0)
-    status_placeholder.success("All `fhir_demo_*` tables truncated.")
+    status_placeholder.success("Demo data cleared.")
 
 
 def _run_sample_load() -> None:
     logger.info("sample_load: user clicked Load Sample FHIR Bundles")
     t0 = time.perf_counter()
     idem = client.new_idempotency_key()
-    with st.status("Loading sample FHIR bundles via backend...", expanded=True) as s:
-        s.update(label="POST /ingest/sample (1 transaction)...")
+    with st.status("Loading sample FHIR bundles...", expanded=True) as s:
+        s.update(label="Ingesting sample bundles into the raw landing zone...")
         result = client.ingest_sample(idem_key=idem, on_retry=_retry_notice(s, "Sample load"))
         raw_count = result.get("raw_count", 0)
         bundle_count = result.get("bundle_count", 0)
         run_id = result.get("run_id")
         server_elapsed = result.get("elapsed_ms", 0) / 1000.0
         s.write(
-            f"Backend ingested **{raw_count}** resource(s) from **{bundle_count}** "
-            f"bundle(s) under run **#{run_id}** (server-side {server_elapsed:.2f}s)."
+            f"Ingested **{raw_count}** resource(s) from **{bundle_count}** "
+            f"bundle(s) under run **#{run_id}** ({server_elapsed:.2f}s)."
         )
         s.update(
             label=f"Sample load complete ({time.perf_counter() - t0:.2f}s).",
@@ -228,7 +254,7 @@ def _run_uploaded_load(uploaded_files) -> None:
             return
 
         idem = client.new_idempotency_key()
-        s.update(label=f"POST /ingest ({len(bundles)} bundle(s), 1 transaction)...")
+        s.update(label=f"Ingesting {len(bundles)} bundle(s) into the raw landing zone...")
         result = client.ingest(
             bundles=bundles,
             source_label="Loaded uploaded bundles",
@@ -238,7 +264,7 @@ def _run_uploaded_load(uploaded_files) -> None:
         raw_count = result.get("raw_count", 0)
         run_id = result.get("run_id")
         s.write(
-            f"Backend ingested **{raw_count}** raw resource(s) under run **#{run_id}**."
+            f"Ingested **{raw_count}** raw resource(s) under run **#{run_id}**."
         )
         s.update(
             label=f"Upload load complete ({time.perf_counter() - t0:.2f}s).",
@@ -254,19 +280,19 @@ def _run_transform() -> None:
     logger.info("transform: user clicked Run Transformation Pipeline")
     t0 = time.perf_counter()
     idem = client.new_idempotency_key()
-    with st.status("Running transformation pipeline via backend...", expanded=True) as s:
-        s.update(label="POST /transform (single transaction on backend)...")
+    with st.status("Running transformation pipeline...", expanded=True) as s:
+        s.update(label="Flattening FHIR resources into the analytics schema...")
         result = client.transform(idem_key=idem, on_retry=_retry_notice(s, "Transform"))
         counts = result.get("counts", {})
         server_elapsed = result.get("elapsed_ms", 0) / 1000.0
         s.write(
-            f"Backend inserted **{counts.get('persons', 0)}** persons, "
+            f"Inserted **{counts.get('persons', 0)}** patients, "
             f"**{counts.get('visits', 0)}** visits, "
             f"**{counts.get('conditions', 0)}** conditions, "
             f"**{counts.get('measurements', 0)}** measurements, "
             f"**{counts.get('drug_exposures', 0)}** drug exposures, "
             f"**{counts.get('mapping_report', 0)}** mapping report row(s) "
-            f"(server-side {server_elapsed:.2f}s)."
+            f"({server_elapsed:.2f}s)."
         )
         s.update(
             label=f"Transformation complete ({time.perf_counter() - t0:.2f}s).",
@@ -274,7 +300,7 @@ def _run_transform() -> None:
         )
     logger.info("transform: end-to-end %.3fs", time.perf_counter() - t0)
     status_placeholder.success(
-        f"Transformation complete — {counts.get('persons', 0)} persons, "
+        f"Transformation complete — {counts.get('persons', 0)} patients, "
         f"{counts.get('visits', 0)} visits, {counts.get('conditions', 0)} conditions, "
         f"{counts.get('measurements', 0)} measurements, "
         f"{counts.get('drug_exposures', 0)} drug exposures, "
@@ -335,13 +361,13 @@ st.divider()
 # a single HTTP request is the actual win of moving to a backend. If this
 # call fails after the client's internal retry, the page renders an error
 # banner and stops; individual tabs don't make their own backend calls.
-with st.spinner("Loading dashboard from backend..."):
+with st.spinner("Loading dashboard..."):
     try:
         dashboard = client.dashboard()
-    except ApiError as e:
+    except ApiError:
         st.error(
-            f"Could not load dashboard from backend: {e}\n\n"
-            "Check the backend service health and `FHIR_OMOP_API_URL`."
+            "Could not load dashboard data. The pipeline may be temporarily "
+            "unavailable — please try again in a moment."
         )
         st.stop()
 
@@ -391,7 +417,7 @@ tab_raw, tab_term, tab_omop, tab_mapping, tab_analytics, tab_arch = st.tabs([
 
 # ----- Raw FHIR Resources --------------------------------------------------
 with tab_raw:
-    st.markdown("#### Raw FHIR resources (as stored in `fhir_demo_raw_fhir_resource`)")
+    st.markdown("#### Raw FHIR resources (as received from the source)")
     raw: Dict[str, List[dict]] = dashboard.get("raw_resources_by_type", {}) or {}
     if not raw:
         st.info("No raw resources loaded yet. Click **Load Sample FHIR Bundles** above.")
@@ -478,18 +504,20 @@ with tab_term:
 
         st.caption(f"Showing **{len(filtered)}** of {len(df)} coding(s).")
 
-        display_df = filtered.rename(columns={
+        display_df = filtered.copy()
+        display_df["target_table"] = display_df["target_table"].map(_label_for)
+        display_df = display_df.rename(columns={
             "resource_type":       "Resource Type",
             "terminology_name":    "System",
             "code":                "Code",
             "display":             "Display",
             "terminology_category": "Category",
-            "target_table":        "Target Table",
+            "target_table":        "Maps To",
             "mapped_successfully": "Mapped?",
             "analytics_use":       "Analytics Use",
         })[
             ["Resource Type", "System", "Code", "Display",
-             "Category", "Target Table", "Mapped?", "Analytics Use"]
+             "Category", "Maps To", "Mapped?", "Analytics Use"]
         ]
         st.dataframe(display_df, width="stretch", hide_index=True)
 
@@ -510,7 +538,7 @@ with tab_term:
 &nbsp;&nbsp;↓
 **{picked_row['terminology_name']}** `{picked_row['code']}` — {picked_row['display'] or '(no display)'}
 &nbsp;&nbsp;↓
-Maps to **`{picked_row['target_table']}`**
+Maps to **{_label_for(picked_row['target_table'])}**
 &nbsp;&nbsp;↓
 Used for *{picked_row['analytics_use'].lower()}*
 
@@ -532,7 +560,7 @@ Used for *{picked_row['analytics_use'].lower()}*
             st.markdown(f"**Category.** {info.get('category', '—')}")
             st.markdown(f"**Where in FHIR.** `{info.get('where_in_fhir', '—')}`")
             st.markdown(f"**This demo's use.** {info.get('demo_usage', '—')}")
-            st.markdown(f"**Target table.** `{info.get('target_table', '—')}`")
+            st.markdown(f"**Maps to.** {_label_for(info.get('target_table', '—'))}")
 
     _term_card("🧪 LOINC",
                terminology.TERMINOLOGY_SYSTEMS["http://loinc.org"])
@@ -557,9 +585,9 @@ Used for *{picked_row['analytics_use'].lower()}*
 
 # ----- OMOP-Inspired Tables ------------------------------------------------
 with tab_omop:
-    st.markdown("#### OMOP-inspired tables (Supabase / Postgres)")
+    st.markdown("#### OMOP-inspired analytics schema")
     st.caption(
-        "These tables are intentionally a simplified slice of the real OMOP CDM. "
+        "These categories are intentionally a simplified slice of the real OMOP CDM. "
         "Concept-id resolution, vocabulary tables, and a great deal of nuance have been omitted."
     )
     omop_tables: Dict[str, List[dict]] = dashboard.get("omop_tables", {}) or {}
@@ -570,7 +598,7 @@ with tab_omop:
         "fhir_demo_measurement",
         "fhir_demo_drug_exposure",
     ]:
-        st.markdown(f"**`{table}`**")
+        st.markdown(f"**{_label_for(table)}**")
         rows = omop_tables.get(table, [])
         if not rows:
             st.info("(empty)")
@@ -658,11 +686,10 @@ with tab_arch:
         **OMOP CDM (Common Data Model).**
         OHDSI's columnar relational model designed for population-level
         analytics across institutions. Source codes from any vocabulary get
-        normalized to a standard `concept_id`, and clinical events live in a
-        small set of canonical tables (`person`, `visit_occurrence`,
-        `condition_occurrence`, `measurement`, `drug_exposure`, …). This demo
-        mirrors that *shape* with `fhir_demo_*` tables — without the
-        concept-id resolution that real OMOP ETL performs.
+        normalized to a standard *concept_id*, and clinical events live in a
+        small set of canonical categories (Patients, Visits, Conditions,
+        Measurements, Drug Exposures, …). This demo mirrors that *shape* —
+        without the concept-id resolution that real OMOP ETL performs.
 
         **Service split.**
 
@@ -670,54 +697,47 @@ with tab_arch:
         Browser
            │
            ▼
-        Streamlit (this page) ── single HTTP GET /dashboard per rerun
-           │                       buttons POST to /reset · /ingest · /transform
+        Streamlit front-end ── one dashboard fetch per page render
+           │                   action buttons post to the backend
            ▼
-        FHIR-OMOP API (FastAPI on Fly.io)
-           │  - single-transaction ingest + transform
-           │  - psycopg2 connect_timeout + handshake retry
-           │  - Idempotency-Key de-dup for /ingest and /transform
+        Backend service ── single-transaction writes
+           │                connection retry + idempotency keys
            ▼
-        Supabase Postgres  (fhir_demo_* schema)
+        PostgreSQL database (raw landing + curated analytics schema)
         ```
 
-        The Streamlit page used to call `DatabaseManager` directly, which
-        opened ~17 Supabase connections per rerun and routinely hung the
-        websocket when a handshake stalled. Moving DB I/O to a separate
-        FastAPI service lets the backend bound those failures (timeout +
-        retry) and surface them as actionable errors instead of blank pages.
-        See `FHIR_OMOP_BACKEND_PLAN.md` for the service spec.
+        The page is a thin HTTP client; the backend owns all database I/O.
+        That lets the backend bound failures (connection timeouts + retries)
+        and surface them as actionable errors instead of blank pages. Writes
+        carry idempotency keys so transient retries don't duplicate data.
 
         **ETL pipeline used here.**
 
         ```
         FHIR Bundle JSON
               ↓
-        Resource Extraction      (backend: fhir_loader.py)
+        Resource Extraction      (parse + group by resourceType)
               ↓
-        Terminology Extraction   (backend + client: terminology.py)
+        Terminology Extraction   (pull codings per resource)
               ↓
-        Simplified Code Mapping  (backend: terminology.classify_coding)
+        Simplified Code Mapping  (classify against recognized vocabularies)
               ↓
-        OMOP-Inspired Tables     (backend: transformers.py)
+        OMOP-Inspired Schema     (Patients, Visits, Conditions, ...)
               ↓
-        Analytics Dashboard      (backend: analytics.py; one GET response)
+        Analytics Dashboard      (frequency + time-series queries)
         ```
 
-        1. *Extract.* Backend reads FHIR Bundle JSON from its bundled samples
-           or from the client's `/ingest` body.
-        2. *Land.* Backend persists every resource as JSONB in
-           `fhir_demo_raw_fhir_resource`, tagged to a row in
-           `fhir_demo_ingestion_run`. Single transaction.
-        3. *Extract terminology.* The Clinical Terminology Explorer tab runs
-           `terminology.build_terminology_rows()` **client-side** on the raw
-           resources returned by `/dashboard`. No round-trip per filter
-           change.
-        4. *Transform.* Backend maps FHIR fields → simplified OMOP-style
-           columns. Patient ids are reconciled to internal `person_id`s
-           inside the single transaction.
-        5. *Report.* Backend emits one row into
-           `fhir_demo_code_mapping_report` per coded resource with the
+        1. *Extract.* Read FHIR Bundle JSON from synthetic samples or from
+           uploaded files.
+        2. *Land.* Persist every resource as JSON in the raw landing zone,
+           tagged to a single ingestion run, in one transaction.
+        3. *Extract terminology.* The Clinical Terminology Explorer tab
+           computes its rows **client-side** from the raw resources, so the
+           filter controls don't cause back-end round-trips.
+        4. *Transform.* Map FHIR fields into simplified OMOP-style columns.
+           Patient ids are reconciled to internal ids inside the single
+           transaction.
+        5. *Report.* Emit one mapping-report row per coded resource with the
            classification status.
 
         **Terminology mapping.**
@@ -726,7 +746,7 @@ with tab_arch:
         used for diagnosis classification and billing; MeSH is included as an
         educational reference for biomedical literature indexing (not consumed
         by this pipeline). Real OMOP ETL invests heavily in resolving these
-        to `concept_id`s through full vocabulary tables — this demo uses a
+        to *concept_id*s through full vocabulary tables — this demo uses a
         curated subset of mappings to illustrate the *shape* of that work.
 
         **Why synthetic data.**
@@ -738,7 +758,7 @@ with tab_arch:
         A portfolio familiarity demo — showing that the patterns of
         healthcare interoperability (resource-oriented JSON, terminology
         mapping, OMOP-style flattening, raw-then-curated ETL) are well
-        understood, and deployable as a Streamlit-fronted service split on
-        Fly.io with idempotent writes and bounded failure modes.
+        understood, and deployable as a thin front-end backed by a dedicated
+        service with idempotent writes and bounded failure modes.
         """
     )
