@@ -325,3 +325,138 @@ def fetch_table_dataframe(db: DatabaseManager, table_name: str) -> pd.DataFrame:
     if not table_name.startswith("fhir_demo_"):
         raise ValueError(f"Refusing to query non-demo table: {table_name}")
     return query_dataframe(db, f"SELECT * FROM {table_name} ORDER BY 1")
+
+
+# ---------------------------------------------------------------------------
+# Single-transaction transform pipeline
+# ---------------------------------------------------------------------------
+def run_transform_in_one_transaction(
+    db: DatabaseManager,
+    grouped: Dict[str, List[dict]],
+) -> Tuple[Dict[str, int], Dict[str, int]]:
+    """Run the full OMOP-inspired transform in ONE connection / ONE tx.
+
+    The previous flow opened up to seven separate Supabase connections per
+    click (persons + four event tables + mapping report, plus the up-front
+    raw fetch). Each connect/handshake against Supabase from a developer
+    machine is ~200 ms–1 s; on a flaky network one of them could stall long
+    enough to drop Streamlit's websocket and blank the page. Collapsing the
+    transform writes into a single connection eliminates the fan-out and
+    turns the whole pipeline into one COMMIT.
+
+    Args:
+        grouped: raw resources keyed by resourceType — typically the output
+            of ``fetch_raw_resources_by_type(db)``.
+
+    Returns:
+        (counts, person_lookup)
+
+        counts dict keys: ``persons``, ``visits``, ``conditions``,
+        ``measurements``, ``drug_exposures``, ``mapping_report``.
+        person_lookup: ``{source_patient_id: person_id}``.
+    """
+    # Local import avoids a cycle: transformers imports terminology, which
+    # is self-contained — db.py used to be a leaf, but the transform helper
+    # is logically the orchestrator so the import flows correctly.
+    from projects.fhir_omop.pipeline import transformers
+
+    t_open = time.perf_counter()
+    logger.info(
+        "run_transform_in_one_transaction: starting (Patient=%d, Encounter=%d, "
+        "Condition=%d, Observation=%d, MedicationRequest=%d)",
+        len(grouped.get("Patient", [])),
+        len(grouped.get("Encounter", [])),
+        len(grouped.get("Condition", [])),
+        len(grouped.get("Observation", [])),
+        len(grouped.get("MedicationRequest", [])),
+    )
+
+    counts: Dict[str, int] = {
+        "persons": 0, "visits": 0, "conditions": 0,
+        "measurements": 0, "drug_exposures": 0, "mapping_report": 0,
+    }
+    person_lookup: Dict[str, int] = {}
+
+    person_rows = [
+        transformers.transform_patient(p) for p in grouped.get("Patient", [])
+    ]
+
+    with db.get_connection() as conn:
+        logger.info(
+            "run_transform_in_one_transaction: DB connection open (%.3fs)",
+            time.perf_counter() - t_open,
+        )
+        with conn.cursor() as cur:
+            # 1) Upsert persons. Per-row INSERT ... ON CONFLICT ... RETURNING
+            #    because we need (source_id → person_id) correlation row-by-row.
+            for p in person_rows:
+                cur.execute(
+                    """
+                    INSERT INTO fhir_demo_person (source_patient_id, gender, birth_date)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (source_patient_id) DO UPDATE
+                        SET gender = EXCLUDED.gender, birth_date = EXCLUDED.birth_date
+                    RETURNING person_id, source_patient_id
+                    """,
+                    (p["source_patient_id"], p["gender"], p["birth_date"]),
+                )
+                person_id, source_id = cur.fetchone()
+                person_lookup[source_id] = person_id
+            counts["persons"] = len(person_lookup)
+
+            # 2) Now that we have person_lookup, build every event row.
+            def _t_many(resources, fn):
+                return [r for r in (fn(x, person_lookup) for x in resources) if r is not None]
+
+            visits     = _t_many(grouped.get("Encounter", []),         transformers.transform_encounter)
+            conditions = _t_many(grouped.get("Condition", []),         transformers.transform_condition)
+            measures   = _t_many(grouped.get("Observation", []),       transformers.transform_observation)
+            drugs      = _t_many(grouped.get("MedicationRequest", []), transformers.transform_medication_request)
+            mapping    = transformers.build_mapping_report_rows(grouped)
+
+            # 3) Bulk-insert every event table on the same open cursor.
+            def _bulk(stmt: str, values: list) -> int:
+                if not values:
+                    return 0
+                psycopg2.extras.execute_values(cur, stmt, values)
+                return len(values)
+
+            counts["visits"] = _bulk(
+                "INSERT INTO fhir_demo_visit_occurrence "
+                "(person_id, encounter_id, visit_start_date, visit_end_date, visit_type) VALUES %s",
+                [(r["person_id"], r["encounter_id"], r["visit_start_date"],
+                  r["visit_end_date"], r["visit_type"]) for r in visits],
+            )
+            counts["conditions"] = _bulk(
+                "INSERT INTO fhir_demo_condition_occurrence "
+                "(person_id, condition_code, condition_display, coding_system, condition_start_date) VALUES %s",
+                [(r["person_id"], r["condition_code"], r["condition_display"],
+                  r["coding_system"], r["condition_start_date"]) for r in conditions],
+            )
+            counts["measurements"] = _bulk(
+                "INSERT INTO fhir_demo_measurement "
+                "(person_id, measurement_code, measurement_display, value_numeric, unit, measurement_date) VALUES %s",
+                [(r["person_id"], r["measurement_code"], r["measurement_display"],
+                  r["value_numeric"], r["unit"], r["measurement_date"]) for r in measures],
+            )
+            counts["drug_exposures"] = _bulk(
+                "INSERT INTO fhir_demo_drug_exposure "
+                "(person_id, drug_code, drug_display, coding_system, start_date) VALUES %s",
+                [(r["person_id"], r["drug_code"], r["drug_display"],
+                  r["coding_system"], r["start_date"]) for r in drugs],
+            )
+            counts["mapping_report"] = _bulk(
+                "INSERT INTO fhir_demo_code_mapping_report "
+                "(resource_type, source_code, coding_system, mapped_successfully, notes) VALUES %s",
+                [(r["resource_type"], r["source_code"], r["coding_system"],
+                  r["mapped_successfully"], r["notes"]) for r in mapping],
+            )
+
+        conn.commit()
+
+    elapsed = time.perf_counter() - t_open
+    logger.info(
+        "run_transform_in_one_transaction: committed in %.3fs — counts=%s",
+        elapsed, counts,
+    )
+    return counts, person_lookup

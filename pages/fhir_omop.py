@@ -230,6 +230,15 @@ def _run_uploaded_load(uploaded_files) -> None:
 
 
 def _run_transform() -> None:
+    """Run the full FHIR → OMOP-inspired transform.
+
+    Uses ``demo_db.run_transform_in_one_transaction`` so every write happens
+    inside ONE Supabase connection / transaction. The page therefore makes
+    at most two round-trips per click: one read (``fetch_raw_resources``)
+    and one write (the transform commit). This is what eliminated the
+    seven-round-trip fan-out that was occasionally stalling the browser
+    long enough to drop Streamlit's websocket and blank the page.
+    """
     logger.info("transform: user clicked Run Transformation Pipeline")
     t0 = time.perf_counter()
     with st.status("Running transformation pipeline...", expanded=True) as s:
@@ -252,60 +261,30 @@ def _run_transform() -> None:
         s.write(f"Read {sum(len(v) for v in grouped.values())} raw resource(s) "
                 f"across {len(grouped)} resource type(s).")
 
-        # Persons first so downstream resources can resolve person_id
-        s.update(label="Inserting persons...")
+        s.update(label="Transforming + writing to Supabase (single transaction)...")
         t = time.perf_counter()
-        person_rows = [transformers.transform_patient(p) for p in grouped.get("Patient", [])]
-        person_lookup = demo_db.insert_persons(db, person_rows)
+        counts, person_lookup = demo_db.run_transform_in_one_transaction(db, grouped)
         logger.info(
-            "transform: inserted %d person(s) in %.3fs",
-            len(person_lookup), time.perf_counter() - t,
+            "transform: single-tx complete in %.3fs — counts=%s",
+            time.perf_counter() - t, counts,
         )
-        s.write(f"Inserted **{len(person_lookup)}** person(s).")
-
-        def _transform_many(resources, fn):
-            return [row for row in (fn(r, person_lookup) for r in resources) if row is not None]
-
-        s.update(label="Transforming clinical events...")
-        visits     = _transform_many(grouped.get("Encounter", []),         transformers.transform_encounter)
-        conditions = _transform_many(grouped.get("Condition", []),         transformers.transform_condition)
-        measures   = _transform_many(grouped.get("Observation", []),       transformers.transform_observation)
-        drugs      = _transform_many(grouped.get("MedicationRequest", []), transformers.transform_medication_request)
-        logger.info(
-            "transform: built rows — visits=%d, conditions=%d, measures=%d, drugs=%d",
-            len(visits), len(conditions), len(measures), len(drugs),
+        s.write(
+            f"Inserted **{counts['persons']}** persons, "
+            f"**{counts['visits']}** visits, **{counts['conditions']}** conditions, "
+            f"**{counts['measurements']}** measurements, "
+            f"**{counts['drug_exposures']}** drug exposures, "
+            f"**{counts['mapping_report']}** mapping report row(s)."
         )
-
-        s.update(label="Writing clinical events to Supabase...")
-        t = time.perf_counter()
-        n_v = demo_db.insert_visits(db, visits)
-        n_c = demo_db.insert_conditions(db, conditions)
-        n_m = demo_db.insert_measurements(db, measures)
-        n_d = demo_db.insert_drug_exposures(db, drugs)
-        logger.info(
-            "transform: inserted v=%d c=%d m=%d d=%d in %.3fs",
-            n_v, n_c, n_m, n_d, time.perf_counter() - t,
-        )
-        s.write(f"Inserted **{n_v}** visits, **{n_c}** conditions, "
-                f"**{n_m}** measurements, **{n_d}** drug exposures.")
-
-        s.update(label="Writing code mapping report...")
-        t = time.perf_counter()
-        mapping_rows = transformers.build_mapping_report_rows(grouped)
-        demo_db.insert_mapping_reports(db, mapping_rows)
-        logger.info(
-            "transform: inserted %d mapping report row(s) in %.3fs",
-            len(mapping_rows), time.perf_counter() - t,
-        )
-        s.write(f"Inserted **{len(mapping_rows)}** mapping report row(s).")
 
         elapsed = time.perf_counter() - t0
         s.update(label=f"Transformation complete ({elapsed:.2f}s).", state="complete")
         logger.info("transform: end-to-end %.3fs", elapsed)
         status_placeholder.success(
-            f"Transformation complete — {len(person_lookup)} persons, "
-            f"{n_v} visits, {n_c} conditions, {n_m} measurements, "
-            f"{n_d} drug exposures, {len(mapping_rows)} mapping rows."
+            f"Transformation complete — {counts['persons']} persons, "
+            f"{counts['visits']} visits, {counts['conditions']} conditions, "
+            f"{counts['measurements']} measurements, "
+            f"{counts['drug_exposures']} drug exposures, "
+            f"{counts['mapping_report']} mapping rows."
         )
 
 

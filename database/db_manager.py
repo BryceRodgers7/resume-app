@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 
 DB_URL = os.getenv("SUPADATABASE_URL")
 
+# psycopg2 connect timeout (seconds). Without this, a hung TCP/TLS handshake
+# to Supabase blocks the calling thread forever — which manifests as the
+# Streamlit websocket dropping and the browser tab going blank. Configurable
+# via the SUPADATABASE_CONNECT_TIMEOUT env var if you need a longer timeout
+# for slower networks.
+CONNECT_TIMEOUT_SECONDS = int(os.getenv("SUPADATABASE_CONNECT_TIMEOUT", "10"))
+
 
 class DatabaseManager:
     """Manages PostgreSQL database connections and operations."""
@@ -82,11 +89,17 @@ class DatabaseManager:
     @contextmanager
     def get_connection(self):
         """Context manager for database connections.
-        
+
+        Opens a fresh psycopg2 connection with a connect timeout so a hung
+        TCP/TLS handshake fails fast (``OperationalError``) instead of
+        blocking the caller forever. Without the timeout, an unreachable
+        Supabase silently freezes the Streamlit script and the browser
+        tab goes blank when the websocket times out.
+
         Yields:
             psycopg2.Connection: Database connection
         """
-        conn = psycopg2.connect(self.db_url)
+        conn = psycopg2.connect(self.db_url, connect_timeout=CONNECT_TIMEOUT_SECONDS)
         try:
             yield conn
         finally:
