@@ -1,10 +1,10 @@
 """FHIR-to-OMOP clinical data pipeline demo page.
 
 A simplified healthcare interoperability demo. The page is a thin HTTP
-client over the FHIR-OMOP backend service (see ``FHIR_OMOP_BACKEND_PLAN.md``
-at the repo root). All database I/O — ingestion, transformation, analytics
-queries — happens in the backend. This page renders the result and
-provides the three action buttons (reset, load, transform).
+client over the FHIR-OMOP backend service. All database I/O — ingestion,
+transformation, analytics queries — happens in the backend. This page
+renders the result and provides the three action buttons (reset, load,
+transform).
 
 Why a backend
 -------------

@@ -31,9 +31,8 @@ see [`DEPLOYMENT.md`](DEPLOYMENT.md) / [`QUICKSTART_DEPLOYMENT.md`](QUICKSTART_D
 | KB loader (one-shot population) | `qdrant/vector_load_kb.py` |
 | Agent schema + seed data | `database/schema.sql`, `database/*_insert.sql` |
 | Portfolio sub-projects | `projects/<name>/` |
-| FHIR → OMOP pipeline | `projects/fhir_omop/pipeline/{db,fhir_loader,transformers,analytics}.py` |
-| FHIR → OMOP sample bundles | `projects/fhir_omop/sample_data/*.json` |
-| FHIR → OMOP schema + reset | `database/fhir_omop_sql/{001_create_tables,002_seed_reset}.sql` |
+| FHIR → OMOP HTTP client | `projects/fhir_omop/pipeline/api_client.py` |
+| FHIR → OMOP terminology (pure compute) | `projects/fhir_omop/pipeline/terminology.py` |
 
 ## Page pattern (important)
 
@@ -56,22 +55,16 @@ alphabetical auto-discovery.
 
 ## The `projects/` namespace
 
-Larger, self-contained portfolio demos live under `projects/<name>/`, with
-their own `pipeline/` package and (optionally) `sample_data/`. The Streamlit
-page lives in `pages/` like any other page and imports from
-`projects.<name>.pipeline.*`. Tables are kept in the shared public schema
-with a `<name>_` prefix (e.g. `fhir_demo_*`) so they don't collide with
-agent tables.
+Larger, self-contained portfolio demos live under `projects/<name>/`. The
+Streamlit page lives in `pages/` like any other page and imports from
+`projects.<name>.pipeline.*`.
 
-The FHIR → OMOP demo (`projects/fhir_omop/`) is the reference example:
-- Sample data in `sample_data/`, ingested via `pages/fhir_omop_demo.py`
-- DDL in `database/fhir_omop_sql/` — applied manually (no migrations)
-- `pipeline/db.py` reuses `DatabaseManager.get_connection()` rather than
-  introducing its own connection layer
-- `pipeline/db.bulk_ingest_resources()` collapses run-start + raw-insert +
-  run-finish into ONE psycopg2 transaction so a click triggers exactly one
-  Supabase round-trip — the multi-round-trip pattern caused visible hangs.
-  Use this pattern when you add any new multi-statement write path.
+The FHIR → OMOP demo (`projects/fhir_omop/`) is now a thin HTTP front-end:
+- `pipeline/api_client.py` — `FhirOmopApiClient`, the only DB-side dependency
+- `pipeline/terminology.py` — pure-compute classifier reused by the
+  Terminology Explorer tab from raw resources the backend returns
+- All database I/O, sample data, and DDL live in the separate FHIR-OMOP
+  backend service (reached via `FHIR_OMOP_API_URL`).
 
 ## The Support Agent flow
 
@@ -116,17 +109,16 @@ secrets use this name.
   this previously used let local user-site (shared across other projects)
   and the Docker build drift apart.
   **How to apply:** keep `==` pins; never relax to `>=` for these two.
-- **DB write pattern for new multi-statement paths** — see
-  `projects/fhir_omop/pipeline/db.bulk_ingest_resources()`. Open one
-  `db.get_connection()` block, run every statement on its cursor, commit
-  once. Multi-call write paths (open-conn / insert / close-conn × N) caused
-  visible page hangs against Supabase. **How to apply:** any time a button
-  click triggers ≥2 SQL statements that belong to the same logical
-  operation, batch them in one transaction.
+- **DB write pattern for new multi-statement paths** — open one
+  `DatabaseManager.get_connection()` block, run every statement on its
+  cursor, commit once. Multi-call write paths (open-conn / insert /
+  close-conn × N) cause visible page hangs against Supabase. **How to
+  apply:** any time a button click triggers ≥2 SQL statements that belong to
+  the same logical operation, batch them in one transaction.
 - **Long-running button handlers should use `st.status(..., expanded=True)`**
   rather than `st.spinner(...)`. `st.status` exposes per-step `.write()` and
   `.update(label=...)` so the user can see progress (and timing) even when
-  Supabase is slow. The FHIR demo's `_run_sample_load` / `_run_transform`
+  Supabase is slow. The FHIR-OMOP page's `_run_sample_load` / `_run_transform`
   are the reference patterns.
 - **The Qdrant collection is owned by `vector_load_kb.py`**, not by
   `VectorStore.__init__`. The init path only verifies and warns; it does not

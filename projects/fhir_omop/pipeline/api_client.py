@@ -2,10 +2,9 @@
 
 The Streamlit page used to call ``DatabaseManager`` directly, which held a
 Supabase connection inside the Streamlit websocket and routinely hung the
-page when a handshake stalled. The backend service (see
-``FHIR_OMOP_BACKEND_PLAN.md`` at the repo root) now owns every DB I/O path;
-this module is a thin ``requests``-based client that mirrors its endpoint
-surface 1:1.
+page when a handshake stalled. The backend service now owns every DB I/O
+path; this module is a thin ``requests``-based client that mirrors its
+endpoint surface 1:1.
 
 Configuration
 -------------
@@ -73,9 +72,9 @@ class FhirOmopApiClient:
         self.base_url = (base_url or os.getenv("FHIR_OMOP_API_URL") or "").rstrip("/")
         if not self.base_url:
             raise ApiNotConfiguredError(
-                "FHIR_OMOP_API_URL is not set. The FHIR-OMOP demo page now "
-                "delegates all database work to a backend service — see "
-                "FHIR_OMOP_BACKEND_PLAN.md for setup."
+                "FHIR_OMOP_API_URL is not set. The FHIR-OMOP demo page "
+                "delegates all database work to a backend service — set "
+                "this env var to the backend's base URL."
             )
         self.api_key = api_key or os.getenv("FHIR_OMOP_API_KEY")
         self.timeout = timeout

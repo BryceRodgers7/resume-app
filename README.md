@@ -51,7 +51,7 @@ Each page lives in `pages/` and is registered in `nav.py`:
 | `pages/pirate_chatbot.py` | Pirate Chatbot | GPT-3.5-turbo with editable system prompt |
 | `pages/stability.py` | Stability | Stability AI SD3 text-to-image |
 | `pages/voyager_gpt.py` | Voyager GPT | Calls remote custom-GPT inference API |
-| `pages/fhir_omop_demo.py` | FHIR → OMOP | Synthetic FHIR R4 → OMOP-inspired schema, with analytics + mapping report |
+| `pages/fhir_omop.py` | FHIR → OMOP | Thin HTTP client over the FHIR → OMOP backend service |
 | `pages/architecture.py` | Architecture | Renders the zoomable SVG diagram |
 
 The home page is defined in `app.py` (`home_page()`), passed into
@@ -86,7 +86,7 @@ resume-app/
 │   ├── pirate_chatbot.py
 │   ├── stability.py
 │   ├── voyager_gpt.py
-│   ├── fhir_omop_demo.py
+│   ├── fhir_omop.py
 │   └── architecture.py
 ├── views/                       # Pages reached only via in-app links (no sidebar)
 │   └── All_Data_Views.py
@@ -99,20 +99,16 @@ resume-app/
 ├── database/                    # PostgreSQL (Supabase) access
 │   ├── db_manager.py            # Connection + queries
 │   ├── schema.sql               # Table DDL (agent_* tables)
-│   ├── *_insert.sql             # Seed data
-│   └── fhir_omop_sql/           # DDL + reset for the FHIR → OMOP demo
-│       ├── 001_create_tables.sql
-│       └── 002_seed_reset.sql
+│   └── *_insert.sql             # Seed data
 ├── qdrant/                      # Vector DB (knowledge base)
 │   ├── vector_store.py          # Search interface used by the agent
 │   ├── vector_load_kb.py        # Bulk-load chunks.json into Qdrant
 │   ├── vector_load_onechunk.py  # Single-chunk upsert helper
 │   └── chunks.json              # Knowledge-base source content
 ├── projects/                    # Self-contained portfolio sub-projects
-│   └── fhir_omop/               # FHIR → OMOP demo (sample data + pipeline)
+│   └── fhir_omop/               # FHIR → OMOP demo (front-end only — backend lives in a separate repo)
 │       ├── README.md
-│       ├── sample_data/         # Synthetic FHIR R4 Bundle JSON
-│       └── pipeline/            # db / fhir_loader / transformers / analytics
+│       └── pipeline/            # api_client.py (HTTP client) + terminology.py (pure compute)
 ├── components/
 │   └── svg_viewer.py            # Zoomable/fullscreen SVG component
 ├── models/                      # Reference copy of trained classifier artifact

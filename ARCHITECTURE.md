@@ -35,12 +35,6 @@ flowchart TB
         ADV["Data Views<br>All_Data_Views.py"]
         FHIR["FHIR → OMOP<br>fhir_omop.py"]
   end
- subgraph FHIROMOP["FHIR → OMOP Pipeline"]
-        FLOADER["Loader<br>fhir_loader.py"]
-        FTRANS["Transformers<br>transformers.py"]
-        FANAL["Analytics<br>analytics.py"]
-        FDB["DB helpers<br>pipeline/db.py"]
-  end
  subgraph Frontend["Streamlit Frontend Container"]
         MAIN["Main Page<br>app.py"]
         Pages
@@ -269,27 +263,26 @@ Database visualization dashboard.
 - Support tickets, returns
 - Knowledge base chunks
 
-#### 7. FHIR → OMOP Demo (`fhir_omop_demo.py`)
-Simplified healthcare interoperability demo — loads synthetic FHIR R4 bundles
-into a raw JSONB landing zone, transforms them into an OMOP-inspired
-relational schema, and surfaces analytics, a code-mapping report, and an
-architecture-notes tab.
+#### 7. FHIR → OMOP Demo (`fhir_omop.py`)
+Simplified healthcare interoperability demo — a thin Streamlit HTTP client
+over the FHIR → OMOP backend service. The backend ingests synthetic FHIR R4
+bundles, transforms them into an OMOP-inspired schema, and serves a single
+`/dashboard` payload that drives every tab in the page.
 
 **Key Features**:
-- Loads either bundled sample data or user-uploaded `.json` Bundles
-- Single-transaction ingest (one Supabase round-trip per click)
+- One `GET /dashboard` call per page render renders all tabs
+- Action buttons (reset / load / transform) POST to the backend with
+  `Idempotency-Key` headers so retries don't duplicate rows
 - `st.status` panels with per-step progress and timings
 - Status banner detects "loaded but not yet transformed" state
 - Synthetic data only — no real clinical data, OMOP-*inspired* not OMOP-CDM-compliant
 
 **Architecture**:
-- Pipeline modules under `projects/fhir_omop/pipeline/`
-  - `fhir_loader.py` — Bundle parsing + resource grouping
-  - `transformers.py` — FHIR → OMOP row dicts + mapping report
-  - `db.py` — thin helpers over `DatabaseManager`, plus `bulk_ingest_resources()` single-transaction ingest
-  - `analytics.py` — dashboard SQL
-- All tables live in the public schema with the `fhir_demo_` prefix
-- DDL lives in `database/fhir_omop_sql/`
+- `pipeline/api_client.py` — `FhirOmopApiClient`, with retry + idempotency
+- `pipeline/terminology.py` — pure-compute classifier used by the Terminology
+  Explorer tab on raw resources returned by the backend
+- The backend service (separate repo) owns all DB I/O, sample data, and DDL.
+  Reached via the `FHIR_OMOP_API_URL` env var.
 
 ### Agentic Support System
 
@@ -401,22 +394,16 @@ OpenAI GPT-4 powered conversational agent with:
 ### FHIR → OMOP Pipeline Flow
 ```
 1. User clicks "Load Sample FHIR Bundles" (or uploads files)
-2. fhir_loader parses each Bundle JSON, groups resources by resourceType
-3. demo_db.bulk_ingest_resources(...) opens ONE Supabase connection and runs:
-   - INSERT into fhir_demo_ingestion_run (open the run)
-   - INSERT VALUES into fhir_demo_raw_fhir_resource (the JSONB landing zone)
-   - UPDATE fhir_demo_ingestion_run (close the run)
-   All three in a single transaction — one round-trip per click.
-4. User clicks "Run Transformation Pipeline"
-5. demo_db.fetch_raw_resources_by_type pulls the landed JSONB back out
-6. transformers map FHIR → OMOP-inspired row dicts; Patients insert first
-   so downstream resources can resolve person_id
-7. Bulk inserts populate person / visit_occurrence / condition_occurrence /
-   measurement / drug_exposure
-8. build_mapping_report_rows generates one row per coded resource
-   indicating whether the source coding system was a recognized standard
-   vocabulary (SNOMED, LOINC, RxNorm, ICD-10)
-9. UI renders metric cards, OMOP tables, mapping report, analytics dashboard
+2. Streamlit page POSTs to /ingest/sample (or /ingest with parsed bundles)
+   on the FHIR-OMOP backend, including an Idempotency-Key header
+3. Backend opens ONE Supabase transaction and runs the full ingest
+   (open run / land JSONB / close run) — one round-trip per click
+4. User clicks "Run Transformation Pipeline" → page POSTs to /transform
+5. Backend reads the landed JSONB, maps FHIR → OMOP-inspired rows, bulk
+   inserts person / visit_occurrence / condition_occurrence / measurement /
+   drug_exposure, and writes the mapping report — all in one transaction
+6. On each rerun the page issues a single GET /dashboard call and renders
+   metric cards, OMOP tables, mapping report, and analytics dashboard
 ```
 
 ## Technology Stack
@@ -535,20 +522,16 @@ resume-app/
 ├── database/                   # Data persistence
 │   ├── db_manager.py           # Database operations
 │   ├── schema.sql              # Table definitions (agent_* tables)
-│   ├── *_insert.sql            # Sample data
-│   └── fhir_omop_sql/          # DDL + reset for the FHIR → OMOP demo
-│       ├── 001_create_tables.sql
-│       └── 002_seed_reset.sql
+│   └── *_insert.sql            # Sample data
 ├── qdrant/                     # Vector storage
 │   ├── vector_store.py         # RAG Vector operations
 │   ├── vector_load_kb.py       # Vector knowledgebase creation
 │   ├── vector_load_onechunk.py # Vector db single-chunk manipulation
 │   └── chunks.json             # Knowledge base
 ├── projects/                   # Self-contained portfolio sub-projects
-│   └── fhir_omop/              # FHIR → OMOP demo
+│   └── fhir_omop/              # FHIR → OMOP demo (front-end only)
 │       ├── README.md
-│       ├── sample_data/        # Synthetic FHIR R4 Bundles
-│       └── pipeline/           # db / fhir_loader / transformers / analytics
+│       └── pipeline/           # api_client.py + terminology.py
 └── .static/                    # Static assets
     └── architecture.svg        # This diagram
     └── me.jpg                  # Bryce Rodgers selfie
